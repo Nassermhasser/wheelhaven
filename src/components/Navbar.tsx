@@ -2,31 +2,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Menu, X, Car, UserCircle, LogOut } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu, User } from 'lucide-react';
+import { useMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useMobile();
   const location = useLocation();
-  const { user, profile, signOut } = useAuth();
-
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Cars', path: '/cars' },
-    { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' },
-  ];
-
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  
+  const isActive = (path: string) => location.pathname === path;
+  
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -35,174 +23,139 @@ const Navbar = () => {
         setIsScrolled(false);
       }
     };
-
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
+  
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
-
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    
+    getUser();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+  
   const handleSignOut = async () => {
-    await signOut();
+    await supabase.auth.signOut();
   };
+  
+  const navLinks = [
+    { name: 'Home', path: '/' },
+    { name: 'Cars', path: '/cars' },
+    { name: 'About', path: '/about' },
+    { name: 'Contact', path: '/contact' },
+  ];
+  
+  if (user) {
+    navLinks.push({ name: 'Admin', path: '/admin' });
+  }
 
+  const NavItems = () => (
+    <>
+      {navLinks.map((link) => (
+        <li key={link.name}>
+          <Link
+            to={link.path}
+            className={`text-base font-medium transition-colors hover:text-primary ${
+              isActive(link.path) ? 'text-primary' : 'text-gray-700'
+            }`}
+          >
+            {link.name}
+          </Link>
+        </li>
+      ))}
+    </>
+  );
+  
   return (
     <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out px-6 md:px-10 py-4",
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-soft" : "bg-transparent"
-      )}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'
+      }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <Car className="h-6 w-6" />
-          <span className="text-xl font-semibold tracking-tight">WheelHaven</span>
-        </Link>
-
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              to={link.path}
-              className={cn(
-                "text-sm transition-colors hover:text-black",
-                location.pathname === link.path 
-                  ? "font-medium text-black" 
-                  : "text-gray-600"
-              )}
-            >
-              {link.name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Authentication buttons */}
-        <div className="hidden md:flex items-center space-x-4">
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <UserCircle className="h-4 w-4" />
-                  <span>
-                    {profile?.first_name 
-                      ? `${profile.first_name}` 
-                      : user.email?.split('@')[0]}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/bookings">My Bookings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive cursor-pointer"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Link to="/auth?mode=login">
-                <Button variant="outline" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/auth?mode=register">
-                <Button size="sm">
-                  Register
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Mobile menu button */}
-        <button
-          className="md:hidden text-gray-700"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md shadow-soft px-6 py-5 border-t animate-fade-in">
-          <nav className="flex flex-col space-y-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                className={cn(
-                  "text-sm transition-colors py-2",
-                  location.pathname === link.path 
-                    ? "font-medium text-black" 
-                    : "text-gray-600"
-                )}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <div className="flex flex-col pt-4 space-y-3 border-t">
-              {user ? (
-                <>
-                  <div className="flex items-center space-x-2 py-2">
-                    <UserCircle className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium">
-                      {profile?.first_name 
-                        ? `${profile.first_name} ${profile.last_name}` 
-                        : user.email?.split('@')[0]}
-                    </span>
-                  </div>
-                  <Link to="/profile">
-                    <Button variant="outline" className="w-full justify-start">
-                      Profile
-                    </Button>
-                  </Link>
-                  <Link to="/bookings">
-                    <Button variant="outline" className="w-full justify-start">
-                      My Bookings
-                    </Button>
-                  </Link>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start text-destructive"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
+      <div className="container max-w-7xl mx-auto px-6 md:px-10">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-2xl font-bold text-gray-900">
+            CarRental
+          </Link>
+          
+          {isMobile ? (
+            <div className="flex items-center space-x-4">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle menu</span>
                   </Button>
-                </>
+                </SheetTrigger>
+                <SheetContent side="right">
+                  <nav className="flex flex-col mt-12">
+                    <ul className="space-y-4">
+                      <NavItems />
+                    </ul>
+                    
+                    <div className="mt-6 pt-6 border-t">
+                      {user ? (
+                        <div className="space-y-4">
+                          <div className="font-medium">Welcome, {user.email}</div>
+                          <Button onClick={handleSignOut} variant="outline" className="w-full">
+                            Sign out
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button asChild className="w-full">
+                          <Link to="/auth?mode=login">
+                            <User className="mr-2 h-4 w-4" />
+                            Sign in
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-10">
+              <nav>
+                <ul className="flex space-x-8">
+                  <NavItems />
+                </ul>
+              </nav>
+              
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-600">
+                    {user.email}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                    Sign out
+                  </Button>
+                </div>
               ) : (
-                <>
+                <Button asChild size="sm">
                   <Link to="/auth?mode=login">
-                    <Button variant="outline" className="w-full">
-                      Sign In
-                    </Button>
+                    <User className="mr-2 h-4 w-4" />
+                    Sign in
                   </Link>
-                  <Link to="/auth?mode=register">
-                    <Button className="w-full">
-                      Register
-                    </Button>
-                  </Link>
-                </>
+                </Button>
               )}
             </div>
-          </nav>
+          )}
         </div>
-      )}
+      </div>
     </header>
   );
 };
