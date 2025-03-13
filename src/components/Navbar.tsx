@@ -3,12 +3,22 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Menu, X, Car, UserCircle } from 'lucide-react';
+import { Menu, X, Car, UserCircle, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, profile, signOut } = useAuth();
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -33,6 +43,10 @@ const Navbar = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header
@@ -67,16 +81,51 @@ const Navbar = () => {
 
         {/* Authentication buttons */}
         <div className="hidden md:flex items-center space-x-4">
-          <Link to="/auth?mode=login">
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/auth?mode=register">
-            <Button size="sm">
-              Register
-            </Button>
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  <span>
+                    {profile?.first_name 
+                      ? `${profile.first_name}` 
+                      : user.email?.split('@')[0]}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/bookings">My Bookings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link to="/auth?mode=login">
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/auth?mode=register">
+                <Button size="sm">
+                  Register
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -107,16 +156,49 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="flex flex-col pt-4 space-y-3 border-t">
-              <Link to="/auth?mode=login">
-                <Button variant="outline" className="w-full">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/auth?mode=register">
-                <Button className="w-full">
-                  Register
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <div className="flex items-center space-x-2 py-2">
+                    <UserCircle className="h-5 w-5 text-gray-600" />
+                    <span className="font-medium">
+                      {profile?.first_name 
+                        ? `${profile.first_name} ${profile.last_name}` 
+                        : user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                  <Link to="/profile">
+                    <Button variant="outline" className="w-full justify-start">
+                      Profile
+                    </Button>
+                  </Link>
+                  <Link to="/bookings">
+                    <Button variant="outline" className="w-full justify-start">
+                      My Bookings
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth?mode=login">
+                    <Button variant="outline" className="w-full">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link to="/auth?mode=register">
+                    <Button className="w-full">
+                      Register
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
