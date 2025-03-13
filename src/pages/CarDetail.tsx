@@ -254,7 +254,11 @@ const CarDetail = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-6">Book This Car</h3>
-                  <BookingForm car={car} />
+                  <BookingForm 
+                    carId={car?.id || ''}
+                    carName={`${car?.brand} ${car?.name}`}
+                    pricePerDay={car?.price || 0}
+                  />
                 </CardContent>
               </Card>
             </div>
