@@ -55,8 +55,17 @@ export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
     setIsSubmitting(true);
     try {
       onSubmit({
-        id: car?.id || '', // In a real app, this would be set by the database
-        ...data,
+        id: car?.id || '',
+        name: data.name, // Explicitly include all required properties
+        brand: data.brand,
+        image: data.image,
+        price: data.price,
+        priceUnit: data.priceUnit,
+        year: data.year,
+        passengers: data.passengers,
+        fuelType: data.fuelType,
+        transmission: data.transmission,
+        featured: data.featured,
       });
     } catch (error) {
       console.error('Error submitting form:', error);
