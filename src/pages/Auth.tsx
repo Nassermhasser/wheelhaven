@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -153,7 +152,10 @@ const Auth = () => {
         console.error('Profile update error:', profileError);
       }
 
-      toast.success('Registration successful! Please check your email to verify your account.');
+      toast({
+        title: "Success",
+        description: "Registration successful! Please check your email to verify your account."
+      });
     } catch (error) {
       console.error('Signup error:', error);
       setAuthError('An unexpected error occurred');
@@ -167,13 +169,11 @@ const Auth = () => {
     setAuthError(null);
 
     try {
-      // First check if the admin user exists by trying to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: 'admin@example.com',
         password: 'admin123',
       });
 
-      // If login fails, create the admin user
       if (signInError) {
         console.log('Admin user not found, creating one...');
         
@@ -194,7 +194,6 @@ const Auth = () => {
           return;
         }
 
-        // After creating the admin, sign in
         const { error: signInAfterCreateError } = await supabase.auth.signInWithPassword({
           email: 'admin@example.com',
           password: 'admin123',
