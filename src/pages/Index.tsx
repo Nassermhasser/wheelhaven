@@ -1,7 +1,7 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
@@ -31,6 +31,10 @@ const Index = () => {
     }
   };
 
+  const handleRegularSignIn = () => {
+    navigate('/auth?mode=login');
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -39,27 +43,32 @@ const Index = () => {
         {/* Additional homepage content would go here */}
       </main>
       
-      {/* Admin Login Section */}
+      {/* Sign In Section with Admin Option */}
       <section className="bg-gray-50 py-10 border-t border-gray-200">
-        <div className="container max-w-7xl mx-auto px-6 md:px-10">
-          <Card className="w-full max-w-md mx-auto">
-            <CardContent className="pt-6">
-              <h3 className="text-xl font-semibold text-center mb-4">Admin Access</h3>
-              <p className="text-sm text-gray-500 text-center mb-4">
-                For demo purposes only. Click below to login with default admin credentials.
-              </p>
-              <div className="flex flex-col space-y-2">
-                <p className="text-xs text-gray-500">Email: admin@example.com</p>
-                <p className="text-xs text-gray-500">Password: admin123</p>
-              </div>
+        <div className="container max-w-7xl mx-auto px-6 md:px-10 text-center">
+          <h2 className="text-2xl font-semibold mb-6">Ready to Get Started?</h2>
+          <div className="flex flex-col sm:flex-row justify-center gap-6 max-w-md mx-auto">
+            <Button 
+              className="flex-1" 
+              onClick={handleRegularSignIn}
+            >
+              Sign In
+            </Button>
+            <div className="flex flex-col items-center">
+              <span className="text-sm text-gray-500 mb-2">Admin? Sign in here</span>
               <Button 
-                className="w-full mt-4" 
+                variant="outline" 
+                className="flex-1" 
                 onClick={handleAdminLogin}
               >
-                Login as Admin
+                Admin Login
               </Button>
-            </CardContent>
-          </Card>
+              <div className="mt-2 text-xs text-gray-400">
+                <p>Email: admin@example.com</p>
+                <p>Password: admin123</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       
