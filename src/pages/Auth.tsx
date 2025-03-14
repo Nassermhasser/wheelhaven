@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -105,7 +104,6 @@ const Auth = () => {
 
       toast.success('Successfully signed in');
       
-      // If admin credentials were used, redirect to admin page
       if (data.email === 'admin@example.com') {
         navigate('/admin');
       }
@@ -138,7 +136,6 @@ const Auth = () => {
         return;
       }
 
-      // Update the profile with additional info
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -155,6 +152,31 @@ const Auth = () => {
       toast.success('Registration successful! Please check your email to verify your account.');
     } catch (error) {
       console.error('Signup error:', error);
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'admin@example.com',
+        password: 'admin123',
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return;
+      }
+
+      toast.success('Admin login successful');
+      navigate('/admin');
+    } catch (error) {
+      console.error('Admin login error:', error);
       setAuthError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -379,7 +401,7 @@ const Auth = () => {
             </Form>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
+        <CardFooter className="flex flex-col space-y-3">
           <div className="text-center text-sm">
             {mode === 'login' ? (
               <div>
@@ -397,6 +419,25 @@ const Auth = () => {
               </div>
             )}
           </div>
+          
+          {mode === 'login' && (
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-2">Admin? Sign in here</div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full"
+                onClick={handleAdminLogin}
+                disabled={isLoading}
+              >
+                Admin Login
+              </Button>
+              <div className="mt-2 text-xs text-gray-400">
+                <p>Email: admin@example.com</p>
+                <p>Password: admin123</p>
+              </div>
+            </div>
+          )}
         </CardFooter>
       </Card>
     </div>
