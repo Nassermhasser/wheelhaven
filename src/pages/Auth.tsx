@@ -47,6 +47,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'login';
+  const isAdmin = searchParams.get('admin') === 'true';
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -54,8 +55,8 @@ const Auth = () => {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: isAdmin ? 'admin@example.com' : '',
+      password: isAdmin ? 'admin123' : '',
       rememberMe: false,
     },
   });
@@ -103,6 +104,11 @@ const Auth = () => {
       }
 
       toast.success('Successfully signed in');
+      
+      // If admin credentials were used, redirect to admin page
+      if (data.email === 'admin@example.com') {
+        navigate('/admin');
+      }
     } catch (error) {
       console.error('Login error:', error);
       setAuthError('An unexpected error occurred');

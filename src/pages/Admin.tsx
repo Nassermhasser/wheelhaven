@@ -22,25 +22,28 @@ const Admin = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          navigate('/auth?mode=login');
+          toast.error('Please sign in to access admin features');
+          navigate('/auth?mode=login&admin=true');
           return;
         }
 
-        // In a real application, you would check if the user has admin privileges
-        // This is a simplified version for demo purposes
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        // Temporary logic: considering users with both first and last name as admins
-        // In a real app, you'd have a proper admin role check
-        if (profile && profile.first_name && profile.last_name) {
+        // Check if the user is using the admin email
+        if (session.user.email === 'admin@example.com') {
           setIsAdmin(true);
         } else {
-          toast.error('You do not have admin privileges');
-          navigate('/');
+          // Fallback to the existing check for other users
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile && profile.first_name && profile.last_name) {
+            setIsAdmin(true);
+          } else {
+            toast.error('You do not have admin privileges');
+            navigate('/');
+          }
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
