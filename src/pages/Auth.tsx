@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -102,7 +103,10 @@ const Auth = () => {
         return;
       }
 
-      toast.success('Successfully signed in');
+      toast({
+        title: "Success",
+        description: "Successfully signed in",
+      });
       
       if (data.email === 'admin@example.com') {
         navigate('/admin');
@@ -163,17 +167,49 @@ const Auth = () => {
     setAuthError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // First check if the admin user exists by trying to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: 'admin@example.com',
         password: 'admin123',
       });
 
-      if (error) {
-        setAuthError(error.message);
-        return;
+      // If login fails, create the admin user
+      if (signInError) {
+        console.log('Admin user not found, creating one...');
+        
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: 'admin@example.com',
+          password: 'admin123',
+          options: {
+            data: {
+              first_name: 'Admin',
+              last_name: 'User',
+              is_admin: true,
+            },
+          },
+        });
+
+        if (signUpError) {
+          setAuthError(signUpError.message);
+          return;
+        }
+
+        // After creating the admin, sign in
+        const { error: signInAfterCreateError } = await supabase.auth.signInWithPassword({
+          email: 'admin@example.com',
+          password: 'admin123',
+        });
+
+        if (signInAfterCreateError) {
+          setAuthError(signInAfterCreateError.message);
+          return;
+        }
       }
 
-      toast.success('Admin login successful');
+      toast({
+        title: "Success",
+        description: "Admin login successful",
+      });
       navigate('/admin');
     } catch (error) {
       console.error('Admin login error:', error);
