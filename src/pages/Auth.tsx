@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -169,17 +170,21 @@ const Auth = () => {
     setAuthError(null);
 
     try {
+      // Use a valid domain for admin email - this is a test account
+      const adminEmail = 'admin@example-domain.com';
+      const adminPassword = 'admin123';
+      
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: 'admin@example.com',
-        password: 'admin123',
+        email: adminEmail,
+        password: adminPassword,
       });
 
       if (signInError) {
         console.log('Admin user not found, creating one...');
         
         const { error: signUpError } = await supabase.auth.signUp({
-          email: 'admin@example.com',
-          password: 'admin123',
+          email: adminEmail,
+          password: adminPassword,
           options: {
             data: {
               first_name: 'Admin',
@@ -195,8 +200,8 @@ const Auth = () => {
         }
 
         const { error: signInAfterCreateError } = await supabase.auth.signInWithPassword({
-          email: 'admin@example.com',
-          password: 'admin123',
+          email: adminEmail,
+          password: adminPassword,
         });
 
         if (signInAfterCreateError) {
@@ -468,7 +473,7 @@ const Auth = () => {
                 Admin Login
               </Button>
               <div className="mt-2 text-xs text-gray-400">
-                <p>Email: admin@example.com</p>
+                <p>Email: admin@example-domain.com</p>
                 <p>Password: admin123</p>
               </div>
             </div>
