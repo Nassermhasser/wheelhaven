@@ -20,6 +20,9 @@ import { CalendarIcon, Clock, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface BookingFormProps {
   carId: string;
@@ -34,6 +37,10 @@ const BookingForm = ({ carId, carName, pricePerDay }: BookingFormProps) => {
   const [dropoffLocation, setDropoffLocation] = useState('');
   const [pickupTime, setPickupTime] = useState('10:00');
   const [dropoffTime, setDropoffTime] = useState('10:00');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   const locations = [
     { name: 'New York Downtown', value: 'new-york-downtown' },
@@ -66,7 +73,7 @@ const BookingForm = ({ carId, carName, pricePerDay }: BookingFormProps) => {
     return days * pricePerDay;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!startDate || !endDate) {
@@ -79,22 +86,57 @@ const BookingForm = ({ carId, carName, pricePerDay }: BookingFormProps) => {
       return;
     }
     
-    // Here you would normally submit the booking data to the backend
-    toast.success(`Booking request for ${carName} submitted successfully!`);
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please log in to book a car');
+      navigate('/auth?mode=login');
+      return;
+    }
     
-    // Log the booking data to the console
-    console.log({
-      carId,
-      carName,
-      startDate,
-      endDate,
-      pickupLocation,
-      dropoffLocation,
-      pickupTime,
-      dropoffTime,
-      totalDays: calculateTotalDays(),
-      totalPrice: calculateTotalPrice()
-    });
+    setIsSubmitting(true);
+    
+    try {
+      // Get location names for readability in the database
+      const pickupLocationName = locations.find(loc => loc.value === pickupLocation)?.name || pickupLocation;
+      const dropoffLocationName = locations.find(loc => loc.value === dropoffLocation)?.name || dropoffLocation;
+      
+      // Create booking in Supabase
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          car_id: carId,
+          user_id: user.id,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          pickup_location: pickupLocationName,
+          dropoff_location: dropoffLocationName,
+          pickup_time: pickupTime,
+          dropoff_time: dropoffTime,
+          total_price: calculateTotalPrice(),
+          status: 'pending'
+        })
+        .select();
+      
+      if (error) {
+        console.error('Error creating booking:', error);
+        throw error;
+      }
+      
+      toast.success(`Booking request for ${carName} submitted successfully!`);
+      
+      // Reset form
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setPickupLocation('');
+      setDropoffLocation('');
+      setPickupTime('10:00');
+      setDropoffTime('10:00');
+      
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to submit booking request');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -260,8 +302,8 @@ const BookingForm = ({ carId, carName, pricePerDay }: BookingFormProps) => {
             <span>${calculateTotalPrice().toFixed(2)}</span>
           </div>
           
-          <Button type="submit" className="w-full">
-            Request Booking
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Processing...' : 'Request Booking'}
           </Button>
           
           <p className="text-xs text-gray-500 text-center">

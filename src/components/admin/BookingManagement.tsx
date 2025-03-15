@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -23,103 +23,87 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Booking {
   id: string;
-  carId: string;
-  carName: string;
-  userId: string;
-  userName: string;
-  startDate: string;
-  endDate: string;
-  pickupLocation: string;
-  dropoffLocation: string;
-  totalPrice: number;
+  car_id: string;
+  car_name?: string;
+  user_id: string;
+  user_name?: string;
+  start_date: string;
+  end_date: string;
+  pickup_location: string;
+  dropoff_location: string;
+  pickup_time: string;
+  dropoff_time: string;
+  total_price: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  created_at: string;
+  user_email?: string;
+  car?: {
+    brand: string;
+    name: string;
+  };
 }
 
 export const BookingManagement = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<Booking['status']>('pending');
+  
+  const queryClient = useQueryClient();
 
-  const fetchBookings = async () => {
-    setIsLoading(true);
-    try {
-      // In a real application, this would be a call to your Supabase table
-      // For now, we'll use mock data for demonstration
-
-      // Mock data for demonstration
-      const mockBookings: Booking[] = [
-        {
-          id: '1',
-          carId: '1',
-          carName: 'Tesla Model 3',
-          userId: 'user1',
-          userName: 'John Doe',
-          startDate: '2023-11-10T10:00:00Z',
-          endDate: '2023-11-15T10:00:00Z',
-          pickupLocation: 'New York Downtown',
-          dropoffLocation: 'New York Airport (JFK)',
-          totalPrice: 600,
-          status: 'confirmed'
-        },
-        {
-          id: '2',
-          carId: '2',
-          carName: 'Porsche 911 Carrera',
-          userId: 'user2',
-          userName: 'Jane Smith',
-          startDate: '2023-11-20T08:00:00Z',
-          endDate: '2023-11-25T18:00:00Z',
-          pickupLocation: 'Los Angeles Downtown',
-          dropoffLocation: 'Los Angeles Airport (LAX)',
-          totalPrice: 1750,
-          status: 'pending'
-        },
-        {
-          id: '3',
-          carId: '3',
-          carName: 'Range Rover Sport',
-          userId: 'user3',
-          userName: 'Mike Johnson',
-          startDate: '2023-11-05T09:00:00Z',
-          endDate: '2023-11-07T17:00:00Z',
-          pickupLocation: 'Chicago Downtown',
-          dropoffLocation: 'Chicago Downtown',
-          totalPrice: 500,
-          status: 'completed'
-        },
-        {
-          id: '4',
-          carId: '1',
-          carName: 'Tesla Model 3',
-          userId: 'user4',
-          userName: 'Sarah Williams',
-          startDate: '2023-11-18T14:00:00Z',
-          endDate: '2023-11-21T14:00:00Z',
-          pickupLocation: 'Miami Beach',
-          dropoffLocation: 'Miami Airport (MIA)',
-          totalPrice: 360,
-          status: 'cancelled'
-        }
-      ];
+  // Fetch bookings with user and car details
+  const { data: bookings, isLoading, error } = useQuery({
+    queryKey: ['adminBookings'],
+    queryFn: async () => {
+      // First get bookings with car details
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          car:cars(brand, name)
+        `)
+        .order('created_at', { ascending: false });
       
-      setBookings(mockBookings);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-      toast.error('Failed to load bookings');
-    } finally {
-      setIsLoading(false);
+      if (bookingsError) throw bookingsError;
+      
+      // Process the joined data
+      const processedBookings = bookingsData.map((booking: any) => {
+        return {
+          ...booking,
+          car_name: booking.car ? `${booking.car.brand} ${booking.car.name}` : 'Unknown Car'
+        };
+      });
+      
+      return processedBookings as Booking[];
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  // Update booking status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: Booking['status'] }) => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select();
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminBookings'] });
+      setIsStatusDialogOpen(false);
+      toast.success(`Booking status updated to ${newStatus}`);
+    },
+    onError: (error) => {
+      console.error('Error updating booking status:', error);
+      toast.error('Failed to update booking status');
+    }
+  });
 
   const handleViewBooking = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -134,22 +118,7 @@ export const BookingManagement = () => {
 
   const saveStatusChange = () => {
     if (!selectedBooking) return;
-
-    try {
-      // In a real application, this would update your Supabase table
-      setBookings(bookings.map(booking => 
-        booking.id === selectedBooking.id 
-          ? { ...booking, status: newStatus } 
-          : booking
-      ));
-      
-      toast.success(`Booking status updated to ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating booking status:', error);
-      toast.error('Failed to update booking status');
-    } finally {
-      setIsStatusDialogOpen(false);
-    }
+    updateStatusMutation.mutate({ id: selectedBooking.id, status: newStatus });
   };
 
   const getStatusBadge = (status: Booking['status']) => {
@@ -185,7 +154,7 @@ export const BookingManagement = () => {
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
-      ) : bookings.length > 0 ? (
+      ) : bookings && bookings.length > 0 ? (
         <Table>
           <TableCaption>List of all bookings in the system</TableCaption>
           <TableHeader>
@@ -202,16 +171,16 @@ export const BookingManagement = () => {
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell className="font-medium">#{booking.id}</TableCell>
-                <TableCell>{booking.userName}</TableCell>
-                <TableCell>{booking.carName}</TableCell>
+                <TableCell className="font-medium">#{booking.id.slice(0, 8)}</TableCell>
+                <TableCell>{booking.user_name || booking.user_id.slice(0, 8)}</TableCell>
+                <TableCell>{booking.car_name}</TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    <div>From: {formatDate(booking.startDate)}</div>
-                    <div>To: {formatDate(booking.endDate)}</div>
+                    <div>From: {formatDate(booking.start_date)}</div>
+                    <div>To: {formatDate(booking.end_date)}</div>
                   </div>
                 </TableCell>
-                <TableCell>${booking.totalPrice.toFixed(2)}</TableCell>
+                <TableCell>${booking.total_price.toFixed(2)}</TableCell>
                 <TableCell>{getStatusBadge(booking.status)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
@@ -252,7 +221,7 @@ export const BookingManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Booking ID</p>
-                  <p className="font-medium">#{selectedBooking.id}</p>
+                  <p className="font-medium">#{selectedBooking.id.slice(0, 8)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Status</p>
@@ -262,38 +231,38 @@ export const BookingManagement = () => {
 
               <div>
                 <p className="text-sm text-gray-500">Customer</p>
-                <p className="font-medium">{selectedBooking.userName}</p>
+                <p className="font-medium">{selectedBooking.user_name || selectedBooking.user_id.slice(0, 8)}</p>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Car</p>
-                <p className="font-medium">{selectedBooking.carName}</p>
+                <p className="font-medium">{selectedBooking.car_name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Start Date</p>
-                  <p className="font-medium">{formatDate(selectedBooking.startDate)}</p>
+                  <p className="font-medium">{formatDate(selectedBooking.start_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">End Date</p>
-                  <p className="font-medium">{formatDate(selectedBooking.endDate)}</p>
+                  <p className="font-medium">{formatDate(selectedBooking.end_date)}</p>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Pickup Location</p>
-                <p className="font-medium">{selectedBooking.pickupLocation}</p>
+                <p className="font-medium">{selectedBooking.pickup_location}</p>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Dropoff Location</p>
-                <p className="font-medium">{selectedBooking.dropoffLocation}</p>
+                <p className="font-medium">{selectedBooking.dropoff_location}</p>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Total Price</p>
-                <p className="font-medium text-lg">${selectedBooking.totalPrice.toFixed(2)}</p>
+                <p className="font-medium text-lg">${selectedBooking.total_price.toFixed(2)}</p>
               </div>
             </div>
           )}
@@ -310,7 +279,7 @@ export const BookingManagement = () => {
           <DialogHeader>
             <DialogTitle>Update Booking Status</DialogTitle>
             <DialogDescription>
-              Change the status of booking #{selectedBooking?.id}
+              Change the status of booking #{selectedBooking?.id.slice(0, 8)}
             </DialogDescription>
           </DialogHeader>
           
@@ -358,8 +327,11 @@ export const BookingManagement = () => {
             <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveStatusChange}>
-              Save Changes
+            <Button 
+              onClick={saveStatusChange}
+              disabled={updateStatusMutation.isPending}
+            >
+              {updateStatusMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

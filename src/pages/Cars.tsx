@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -15,127 +18,36 @@ import {
 } from "@/components/ui/dialog";
 
 const Cars = () => {
-  const [cars, setCars] = useState<CarProps[]>([]);
-  const [filteredCars, setFilteredCars] = useState<CarProps[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [filteredCars, setFilteredCars] = useState<CarProps[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   
-  // Mock data for cars
-  const mockCars: CarProps[] = [
-    {
-      id: '1',
-      name: 'Model 3',
-      brand: 'Tesla',
-      image: 'https://images.unsplash.com/photo-1619767886558-efdc7b9af5a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-      price: 120,
-      priceUnit: 'per day',
-      year: 2022,
-      passengers: 5,
-      fuelType: 'Electric',
-      transmission: 'Automatic',
-      featured: true
-    },
-    {
-      id: '2',
-      name: '911 Carrera',
-      brand: 'Porsche',
-      image: 'https://images.unsplash.com/photo-1550019479-9bff5c522de5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
-      price: 350,
-      priceUnit: 'per day',
-      year: 2021,
-      passengers: 2,
-      fuelType: 'Gasoline',
-      transmission: 'Automatic',
-      featured: true
-    },
-    {
-      id: '3',
-      name: 'Range Rover Sport',
-      brand: 'Land Rover',
-      image: 'https://images.unsplash.com/photo-1566936342903-8192041f16dd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-      price: 250,
-      priceUnit: 'per day',
-      year: 2022,
-      passengers: 5,
-      fuelType: 'Hybrid',
-      transmission: 'Automatic',
-      featured: true
-    },
-    {
-      id: '4',
-      name: 'A4',
-      brand: 'Audi',
-      image: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1469&q=80',
-      price: 150,
-      priceUnit: 'per day',
-      year: 2022,
-      passengers: 5,
-      fuelType: 'Gasoline',
-      transmission: 'Automatic'
-    },
-    {
-      id: '5',
-      name: 'M4 Competition',
-      brand: 'BMW',
-      image: 'https://images.unsplash.com/photo-1617814076668-8dde6cd036d6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-      price: 280,
-      priceUnit: 'per day',
-      year: 2023,
-      passengers: 4,
-      fuelType: 'Gasoline',
-      transmission: 'Automatic'
-    },
-    {
-      id: '6',
-      name: 'G-Class',
-      brand: 'Mercedes',
-      image: 'https://images.unsplash.com/photo-1520031441872-265e4ff70366?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
-      price: 320,
-      priceUnit: 'per day',
-      year: 2022,
-      passengers: 5,
-      fuelType: 'Gasoline',
-      transmission: 'Automatic'
-    },
-    {
-      id: '7',
-      name: 'GT-R',
-      brand: 'Nissan',
-      image: 'https://images.unsplash.com/photo-1622571555446-a523eb95ba7e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-      price: 290,
-      priceUnit: 'per day',
-      year: 2021,
-      passengers: 2,
-      fuelType: 'Gasoline',
-      transmission: 'Automatic'
-    },
-    {
-      id: '8',
-      name: 'Model X',
-      brand: 'Tesla',
-      image: 'https://images.unsplash.com/photo-1613271314983-4234f396f48d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1444&q=80',
-      price: 190,
-      priceUnit: 'per day',
-      year: 2023,
-      passengers: 7,
-      fuelType: 'Electric',
-      transmission: 'Automatic'
+  // Fetch all cars from Supabase
+  const { data: cars, isLoading, error } = useQuery({
+    queryKey: ['allCars'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cars')
+        .select('*')
+        .order('brand');
+      
+      if (error) throw error;
+      return data as CarProps[];
     }
-  ];
+  });
 
-  // Load cars (simulated API call)
+  // Show error toast if query fails
   useEffect(() => {
-    // In a real app, this would be an API call
-    setTimeout(() => {
-      setCars(mockCars);
-      setFilteredCars(mockCars);
-      setIsLoading(false);
-    }, 800);
-  }, []);
+    if (error) {
+      console.error('Error fetching cars:', error);
+      toast.error('Failed to load cars');
+    }
+  }, [error]);
   
-  // Handle search
+  // Update filtered cars when cars data or search term changes
   useEffect(() => {
+    if (!cars) return;
+    
     if (searchTerm.trim() === '') {
       setFilteredCars(cars);
     } else {
@@ -149,6 +61,8 @@ const Cars = () => {
   
   // Handle filters
   const handleFilter = (filters: any) => {
+    if (!cars) return;
+    
     let filtered = [...cars];
     const activeFiltersArray: string[] = [];
     
@@ -195,7 +109,7 @@ const Cars = () => {
   // Clear all filters
   const clearAllFilters = () => {
     setActiveFilters([]);
-    setFilteredCars(cars);
+    setFilteredCars(cars || []);
   };
   
   return (

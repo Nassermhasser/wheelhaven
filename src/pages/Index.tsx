@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,72 +8,38 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import CarCard, { CarProps } from '@/components/CarCard';
+import { useQuery } from '@tanstack/react-query';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [popularCars, setPopularCars] = useState<CarProps[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch featured cars using React Query
+  const { data: popularCars, isLoading, error } = useQuery({
+    queryKey: ['popularCars'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cars')
+        .select('*')
+        .order('featured', { ascending: false })
+        .limit(3);
+      
+      if (error) throw error;
+      return data as CarProps[];
+    }
+  });
+
+  // Show error toast if query fails
   useEffect(() => {
-    const fetchPopularCars = async () => {
-      setIsLoading(true);
-      try {
-        setPopularCars([
-          {
-            id: '1',
-            name: 'Model S',
-            brand: 'Tesla',
-            image: 'https://images.unsplash.com/photo-1619767886558-efdc146e8803?q=80&w=1200',
-            price: 150,
-            priceUnit: 'per day',
-            year: 2023,
-            passengers: 5,
-            fuelType: 'Electric',
-            transmission: 'Automatic',
-            featured: true
-          },
-          {
-            id: '2',
-            name: 'F-150',
-            brand: 'Ford',
-            image: 'https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?q=80&w=1200',
-            price: 120,
-            priceUnit: 'per day',
-            year: 2022,
-            passengers: 5,
-            fuelType: 'Hybrid',
-            transmission: 'Automatic',
-            featured: false
-          },
-          {
-            id: '3',
-            name: 'Civic',
-            brand: 'Honda',
-            image: 'https://images.unsplash.com/photo-1605515421156-69a924f1094c?q=80&w=1200',
-            price: 90,
-            priceUnit: 'per day',
-            year: 2021,
-            passengers: 5,
-            fuelType: 'Gasoline',
-            transmission: 'Automatic',
-            featured: false
-          }
-        ]);
-      } catch (error) {
-        console.error('Error fetching popular cars:', error);
-        toast.error('Failed to load popular cars');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPopularCars();
-  }, []);
+    if (error) {
+      console.error('Error fetching popular cars:', error);
+      toast.error('Failed to load popular cars');
+    }
+  }, [error]);
 
   const handleAdminLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: 'admin@example.com',
+        email: 'admin@example-domain.com',
         password: 'admin123',
       });
 
@@ -115,7 +82,7 @@ const Index = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {popularCars.map((car) => (
+                {popularCars && popularCars.map((car) => (
                   <CarCard key={car.id} car={car} />
                 ))}
               </div>

@@ -10,70 +10,47 @@ import { Calendar, ChevronLeft, Users, Gauge, Fuel, Sparkles, Car as CarIcon } f
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import BookingForm from '@/components/BookingForm';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import type { CarProps } from '@/components/CarCard';
 
 const CarDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [car, setCar] = useState<CarProps | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // Fetch car details using React Query
+  const { data: car, isLoading, error } = useQuery({
+    queryKey: ['carDetail', id],
+    queryFn: async () => {
+      if (!id) throw new Error('No car ID provided');
+      
+      const { data, error } = await supabase
+        .from('cars')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data as CarProps;
+    }
+  });
+
+  // Show error toast if query fails
   useEffect(() => {
-    // Scroll to top when component mounts
+    if (error) {
+      console.error('Error fetching car details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load car details",
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
     window.scrollTo(0, 0);
-    
-    // Simulate API call to fetch car details
-    setIsLoading(true);
-    
-    // Mock data - in a real app, this would be an API call to fetch the car by ID
-    const mockCars: CarProps[] = [
-      {
-        id: '1',
-        name: 'Model 3',
-        brand: 'Tesla',
-        image: 'https://images.unsplash.com/photo-1619767886558-efdc7b9af5a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-        price: 120,
-        priceUnit: 'per day',
-        year: 2022,
-        passengers: 5,
-        fuelType: 'Electric',
-        transmission: 'Automatic',
-        featured: true
-      },
-      {
-        id: '2',
-        name: '911 Carrera',
-        brand: 'Porsche',
-        image: 'https://images.unsplash.com/photo-1550019479-9bff5c522de5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
-        price: 350,
-        priceUnit: 'per day',
-        year: 2021,
-        passengers: 2,
-        fuelType: 'Gasoline',
-        transmission: 'Automatic',
-        featured: true
-      },
-      {
-        id: '3',
-        name: 'Range Rover Sport',
-        brand: 'Land Rover',
-        image: 'https://images.unsplash.com/photo-1566936342903-8192041f16dd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80',
-        price: 250,
-        priceUnit: 'per day',
-        year: 2022,
-        passengers: 5,
-        fuelType: 'Hybrid',
-        transmission: 'Automatic',
-        featured: true
-      }
-    ];
-    
-    setTimeout(() => {
-      const foundCar = mockCars.find(c => c.id === id);
-      setCar(foundCar || null);
-      setIsLoading(false);
-    }, 800);
-  }, [id]);
+  }, []);
 
   const handleAddToFavorites = () => {
     toast({
@@ -130,6 +107,10 @@ const CarDetail = () => {
     );
   }
 
+  // Get price unit (handle both snake_case from DB and camelCase from legacy code)
+  const priceUnit = car.price_unit || car.priceUnit || 'per day';
+  const fuelType = car.fuel_type || car.fuelType || '';
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -168,7 +149,7 @@ const CarDetail = () => {
                 </div>
                 <div className="mt-4 md:mt-0">
                   <div className="text-3xl font-semibold">${car.price}</div>
-                  <div className="text-gray-500 text-sm">{car.priceUnit}</div>
+                  <div className="text-gray-500 text-sm">{priceUnit}</div>
                 </div>
               </div>
               
@@ -185,7 +166,7 @@ const CarDetail = () => {
                 <div className="bg-gray-50 p-4 rounded-lg flex flex-col items-center text-center">
                   <Fuel className="h-6 w-6 text-primary mb-2" />
                   <span className="text-sm text-gray-600">Fuel Type</span>
-                  <span className="font-medium">{car.fuelType}</span>
+                  <span className="font-medium">{fuelType}</span>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg flex flex-col items-center text-center">
                   <CarIcon className="h-6 w-6 text-primary mb-2" />
@@ -251,16 +232,11 @@ const CarDetail = () => {
             
             {/* Booking Form */}
             <div>
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-6">Book This Car</h3>
-                  <BookingForm 
-                    carId={car?.id || ''}
-                    carName={`${car?.brand} ${car?.name}`}
-                    pricePerDay={car?.price || 0}
-                  />
-                </CardContent>
-              </Card>
+              <BookingForm 
+                carId={car.id}
+                carName={`${car.brand} ${car.name}`}
+                pricePerDay={car.price}
+              />
             </div>
           </div>
         </div>

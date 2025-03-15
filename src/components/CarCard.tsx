@@ -17,16 +17,22 @@ export interface CarProps {
   brand: string;
   image: string;
   price: number;
-  priceUnit: string;
+  price_unit?: string;
+  priceUnit?: string; // For backward compatibility
   year: number;
   passengers: number;
-  fuelType: string;
+  fuel_type?: string;
+  fuelType?: string; // For backward compatibility
   transmission: string;
   featured?: boolean;
 }
 
 const CarCard = ({ car }: { car: CarProps }) => {
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Handle both snake_case from DB and camelCase from legacy code
+  const priceUnit = car.price_unit || car.priceUnit || 'per day';
+  const fuelType = car.fuel_type || car.fuelType || '';
   
   return (
     <Card 
@@ -57,7 +63,7 @@ const CarCard = ({ car }: { car: CarProps }) => {
           </div>
           <div className="text-right">
             <p className="text-2xl font-semibold">${car.price}</p>
-            <p className="text-sm text-gray-500">{car.priceUnit}</p>
+            <p className="text-sm text-gray-500">{priceUnit}</p>
           </div>
         </div>
       </CardHeader>
@@ -70,7 +76,7 @@ const CarCard = ({ car }: { car: CarProps }) => {
           </div>
           <div className="flex flex-col items-center text-center">
             <Fuel className="h-5 w-5 text-gray-500 mb-1" />
-            <span className="text-sm text-gray-600">{car.fuelType}</span>
+            <span className="text-sm text-gray-600">{fuelType}</span>
           </div>
           <div className="flex flex-col items-center text-center">
             <Calendar className="h-5 w-5 text-gray-500 mb-1" />

@@ -9,6 +9,107 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          car_id: string
+          created_at: string
+          dropoff_location: string
+          dropoff_time: string
+          end_date: string
+          id: string
+          pickup_location: string
+          pickup_time: string
+          start_date: string
+          status: string
+          total_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          dropoff_location: string
+          dropoff_time: string
+          end_date: string
+          id?: string
+          pickup_location: string
+          pickup_time: string
+          start_date: string
+          status?: string
+          total_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          dropoff_location?: string
+          dropoff_time?: string
+          end_date?: string
+          id?: string
+          pickup_location?: string
+          pickup_time?: string
+          start_date?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cars: {
+        Row: {
+          brand: string
+          created_at: string
+          featured: boolean | null
+          fuel_type: string
+          id: string
+          image: string
+          name: string
+          passengers: number
+          price: number
+          price_unit: string
+          transmission: string
+          year: number
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          featured?: boolean | null
+          fuel_type: string
+          id?: string
+          image: string
+          name: string
+          passengers: number
+          price: number
+          price_unit?: string
+          transmission: string
+          year: number
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          featured?: boolean | null
+          fuel_type?: string
+          id?: string
+          image?: string
+          name?: string
+          passengers?: number
+          price?: number
+          price_unit?: string
+          transmission?: string
+          year?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
