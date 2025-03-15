@@ -22,6 +22,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const adminSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -34,6 +36,15 @@ type AdminFormValues = z.infer<typeof adminSchema>;
 
 export const CreateAdminForm = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect non-admin users
+  if (profile && !profile.is_admin) {
+    toast.error('Only administrators can access this feature');
+    navigate('/');
+    return null;
+  }
 
   const form = useForm<AdminFormValues>({
     resolver: zodResolver(adminSchema),
@@ -49,6 +60,12 @@ export const CreateAdminForm = () => {
     setIsLoading(true);
     
     try {
+      // Check if the current user is an admin
+      if (!profile?.is_admin) {
+        toast.error('You do not have permission to create admin users');
+        return;
+      }
+
       // First create the user with supabase auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,

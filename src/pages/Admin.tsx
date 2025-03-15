@@ -7,30 +7,27 @@ import Footer from '@/components/Footer';
 import { CarManagement } from '@/components/admin/CarManagement';
 import { BookingManagement } from '@/components/admin/BookingManagement';
 import { CreateAdminForm } from '@/components/admin/CreateAdminForm';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Admin = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
       setIsLoading(true);
       
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
         if (!session) {
           toast.error('Please sign in to access admin features');
           navigate('/auth?mode=login&admin=true');
           return;
         }
 
-        // Check if the user has admin privileges using the new is_admin field
-        if (profile && profile.is_admin) {
+        // Strict check that profile exists and is admin
+        if (profile && profile.is_admin === true) {
           // User is admin, allow access
           setIsLoading(false);
         } else {
@@ -46,7 +43,7 @@ const Admin = () => {
     };
 
     checkAdminStatus();
-  }, [navigate, profile]);
+  }, [navigate, profile, session]);
 
   if (isLoading) {
     return (
