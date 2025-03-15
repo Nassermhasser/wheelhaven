@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CarManagement } from '@/components/admin/CarManagement';
 import { BookingManagement } from '@/components/admin/BookingManagement';
+import { CreateAdminForm } from '@/components/admin/CreateAdminForm';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -64,9 +65,10 @@ const Admin = () => {
           <h1 className="text-3xl md:text-4xl font-semibold mb-8">Admin Dashboard</h1>
           
           <Tabs defaultValue="cars" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="cars">Car Management</TabsTrigger>
               <TabsTrigger value="bookings">Booking Management</TabsTrigger>
+              <TabsTrigger value="admins">Admin Management</TabsTrigger>
             </TabsList>
             
             <TabsContent value="cars">
@@ -75,6 +77,12 @@ const Admin = () => {
             
             <TabsContent value="bookings">
               <BookingManagement />
+            </TabsContent>
+
+            <TabsContent value="admins">
+              <div className="max-w-md mx-auto">
+                <CreateAdminForm />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
