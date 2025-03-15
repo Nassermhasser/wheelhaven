@@ -223,6 +223,74 @@ const Auth = () => {
     }
   };
 
+  // New function to create a specific admin user
+  const createSpecificAdmin = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const adminEmail = 'nasser321m@gmail.ma';
+      const adminPassword = 'Admin123';
+      const firstName = 'Nasser';
+      const lastName = 'MH';
+      
+      // Check if user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('first_name', firstName)
+        .eq('last_name', lastName)
+        .single();
+      
+      if (!checkError && existingUser) {
+        setAuthError('This admin user already exists');
+        return;
+      }
+      
+      // Create new admin user
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: adminEmail,
+        password: adminPassword,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            is_admin: true,
+          },
+        },
+      });
+
+      if (signUpError) {
+        setAuthError(signUpError.message);
+        return;
+      }
+
+      // Update the profile to set is_admin to true
+      if (data.user) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('id', data.user.id);
+        
+        if (updateError) {
+          console.error('Error updating admin status:', updateError);
+          setAuthError('Error setting admin privileges');
+          return;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `Admin user ${firstName} ${lastName} created successfully!`,
+      });
+    } catch (error) {
+      console.error('Admin creation error:', error);
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <Card className="w-full max-w-md">
@@ -461,7 +529,7 @@ const Auth = () => {
           </div>
           
           {mode === 'login' && (
-            <div className="text-center">
+            <div className="text-center space-y-3">
               <div className="text-sm text-gray-500 mb-2">Admin? Sign in here</div>
               <Button 
                 variant="outline" 
@@ -470,11 +538,20 @@ const Auth = () => {
                 onClick={handleAdminLogin}
                 disabled={isLoading}
               >
-                Admin Login
+                Default Admin Login
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className="w-full"
+                onClick={createSpecificAdmin}
+                disabled={isLoading}
+              >
+                Create Nasser MH Admin
               </Button>
               <div className="mt-2 text-xs text-gray-400">
-                <p>Email: admin@example-domain.com</p>
-                <p>Password: admin123</p>
+                <p>Default Admin: admin@example-domain.com / admin123</p>
+                <p>New Admin: nasser321m@gmail.ma / Admin123</p>
               </div>
             </div>
           )}
