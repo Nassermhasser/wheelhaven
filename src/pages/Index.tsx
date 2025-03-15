@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
@@ -20,6 +20,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('cars')
         .select('*')
+        .eq('availability', true)
         .order('featured', { ascending: false })
         .limit(3);
       
@@ -29,7 +30,7 @@ const Index = () => {
   });
 
   // Show error toast if query fails
-  useEffect(() => {
+  React.useEffect(() => {
     if (error) {
       console.error('Error fetching popular cars:', error);
       toast.error('Failed to load popular cars');

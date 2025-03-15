@@ -8,11 +8,12 @@ import { CarManagement } from '@/components/admin/CarManagement';
 import { BookingManagement } from '@/components/admin/BookingManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Admin = () => {
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -27,35 +28,24 @@ const Admin = () => {
           return;
         }
 
-        // Check if the user is using the admin email
-        if (session.user.email === 'admin@example.com') {
-          setIsAdmin(true);
+        // Check if the user has admin privileges using the new is_admin field
+        if (profile && profile.is_admin) {
+          // User is admin, allow access
+          setIsLoading(false);
         } else {
-          // Fallback to the existing check for other users
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile && profile.first_name && profile.last_name) {
-            setIsAdmin(true);
-          } else {
-            toast.error('You do not have admin privileges');
-            navigate('/');
-          }
+          // User is not admin, redirect to home
+          toast.error('You do not have admin privileges');
+          navigate('/');
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
         toast.error('Unable to verify admin status');
         navigate('/');
-      } finally {
-        setIsLoading(false);
       }
     };
 
     checkAdminStatus();
-  }, [navigate]);
+  }, [navigate, profile]);
 
   if (isLoading) {
     return (
@@ -63,10 +53,6 @@ const Admin = () => {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null; // This shouldn't render as the user would be redirected
   }
 
   return (

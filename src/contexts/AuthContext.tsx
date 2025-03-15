@@ -9,6 +9,7 @@ interface Profile {
   last_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  is_admin: boolean;
 }
 
 interface AuthContextType {

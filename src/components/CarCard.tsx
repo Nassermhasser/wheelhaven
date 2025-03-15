@@ -25,6 +25,7 @@ export interface CarProps {
   fuelType?: string; // For backward compatibility
   transmission: string;
   featured?: boolean;
+  availability?: boolean;
 }
 
 const CarCard = ({ car }: { car: CarProps }) => {
@@ -33,6 +34,7 @@ const CarCard = ({ car }: { car: CarProps }) => {
   // Handle both snake_case from DB and camelCase from legacy code
   const priceUnit = car.price_unit || car.priceUnit || 'per day';
   const fuelType = car.fuel_type || car.fuelType || '';
+  const isAvailable = car.availability !== undefined ? car.availability : true;
   
   return (
     <Card 
@@ -46,11 +48,16 @@ const CarCard = ({ car }: { car: CarProps }) => {
             Featured
           </Badge>
         )}
+        {!isAvailable && (
+          <Badge className="absolute top-4 left-4 z-10 bg-red-500/90 text-white">
+            Unavailable
+          </Badge>
+        )}
         <div className="h-56 overflow-hidden">
           <img 
             src={car.image} 
             alt={car.name} 
-            className={`w-full h-full object-cover transition-all duration-700 ${isHovered ? 'scale-110' : 'scale-100'}`}
+            className={`w-full h-full object-cover transition-all duration-700 ${isHovered ? 'scale-110' : 'scale-100'} ${!isAvailable ? 'opacity-70' : ''}`}
           />
         </div>
       </div>
@@ -89,9 +96,13 @@ const CarCard = ({ car }: { car: CarProps }) => {
         <div className="w-full flex justify-between items-center">
           <span className="text-sm text-gray-500">{car.transmission}</span>
           <Link to={`/cars/${car.id}`}>
-            <Button>
-              View Details
-              <ChevronRight className="ml-1 h-4 w-4" />
+            <Button disabled={!isAvailable}>
+              {isAvailable ? (
+                <>
+                  View Details
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </>
+              ) : 'Not Available'}
             </Button>
           </Link>
         </div>

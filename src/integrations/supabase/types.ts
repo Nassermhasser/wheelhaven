@@ -67,6 +67,7 @@ export type Database = {
       }
       cars: {
         Row: {
+          availability: boolean | null
           brand: string
           created_at: string
           featured: boolean | null
@@ -81,6 +82,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          availability?: boolean | null
           brand: string
           created_at?: string
           featured?: boolean | null
@@ -95,6 +97,7 @@ export type Database = {
           year: number
         }
         Update: {
+          availability?: boolean | null
           brand?: string
           created_at?: string
           featured?: boolean | null
@@ -116,6 +119,7 @@ export type Database = {
           created_at: string
           first_name: string | null
           id: string
+          is_admin: boolean | null
           last_name: string | null
           phone: string | null
           updated_at: string
@@ -125,6 +129,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id: string
+          is_admin?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
@@ -134,6 +139,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id?: string
+          is_admin?: boolean | null
           last_name?: string | null
           phone?: string | null
           updated_at?: string
