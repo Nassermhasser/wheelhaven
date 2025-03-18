@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Mail } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Mail, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
@@ -171,6 +171,12 @@ const Auth = () => {
     }
   };
 
+  const handleAdminLogin = () => {
+    loginForm.setValue('email', 'admin@carrental.com');
+    loginForm.setValue('password', 'admin123');
+    toast.info("Default admin credentials filled in. Click Sign in to continue.");
+  };
+
   // If email verification is in progress
   if (verifyingEmail) {
     return (
@@ -317,6 +323,19 @@ const Auth = () => {
                 >
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
+                
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 flex items-center gap-2"
+                    onClick={handleAdminLogin}
+                  >
+                    <ShieldAlert className="h-4 w-4" />
+                    Admin Login
+                  </Button>
+                </div>
               </form>
             </Form>
           ) : (
