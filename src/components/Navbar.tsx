@@ -1,16 +1,17 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user, profile, signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -27,56 +28,42 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
+  // Define navigation links - conditionally include Admin link only for admin users
+  const getNavLinks = () => {
+    const links = [
+      { name: 'Home', path: '/' },
+      { name: 'Cars', path: '/cars' },
+      { name: 'About', path: '/about' },
+      { name: 'Contact', path: '/contact' },
+    ];
     
-    getUser();
+    // Only show Admin link if user is an admin
+    if (profile?.is_admin) {
+      links.push({ name: 'Admin', path: '/admin' });
+    }
     
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user || null);
-      }
-    );
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-  
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    return links;
   };
-  
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Cars', path: '/cars' },
-    { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' },
-  ];
-  
-  if (user) {
-    navLinks.push({ name: 'Admin', path: '/admin' });
-  }
 
-  const NavItems = () => (
-    <>
-      {navLinks.map((link) => (
-        <li key={link.name}>
-          <Link
-            to={link.path}
-            className={`text-base font-medium transition-colors hover:text-primary ${
-              isActive(link.path) ? 'text-primary' : 'text-gray-700'
-            }`}
-          >
-            {link.name}
-          </Link>
-        </li>
-      ))}
-    </>
-  );
+  const NavItems = () => {
+    const navLinks = getNavLinks();
+    return (
+      <>
+        {navLinks.map((link) => (
+          <li key={link.name}>
+            <Link
+              to={link.path}
+              className={`text-base font-medium transition-colors hover:text-primary ${
+                isActive(link.path) ? 'text-primary' : 'text-gray-700'
+              }`}
+            >
+              {link.name}
+            </Link>
+          </li>
+        ))}
+      </>
+    );
+  };
   
   return (
     <header
@@ -109,7 +96,7 @@ const Navbar = () => {
                       {user ? (
                         <div className="space-y-4">
                           <div className="font-medium">Welcome, {user.email}</div>
-                          <Button onClick={handleSignOut} variant="outline" className="w-full">
+                          <Button onClick={signOut} variant="outline" className="w-full">
                             Sign out
                           </Button>
                         </div>
@@ -139,7 +126,7 @@ const Navbar = () => {
                   <span className="text-sm text-gray-600">
                     {user.email}
                   </span>
-                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <Button variant="outline" size="sm" onClick={signOut}>
                     Sign out
                   </Button>
                 </div>
