@@ -5,8 +5,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -19,6 +18,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { AlertCircle, CheckCircle2, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -50,13 +52,16 @@ const Auth = () => {
   const isAdmin = searchParams.get('admin') === 'true';
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
   const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: isAdmin ? 'admin@example.com' : '',
-      password: isAdmin ? 'admin123' : '',
+      email: '',
+      password: '',
       rememberMe: false,
     },
   });
@@ -75,10 +80,33 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
+    // Check for email confirmation token in URL
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=signup') && hash.includes('access_token')) {
+      setVerifyingEmail(true);
+      // The token is automatically processed by Supabase
+      // We just need to check if the user is logged in now
+      setTimeout(() => {
+        if (user) {
+          toast.success("Email verified successfully!");
           navigate('/');
+        }
+      }, 1000);
+    }
+  }, [navigate, user]);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth event:', event);
+        
+        if (event === 'SIGNED_IN' && session) {
+          await refreshProfile();
+          if (isAdmin) {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
         }
       }
     );
@@ -86,7 +114,7 @@ const Auth = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, isAdmin, refreshProfile]);
 
   const handleLoginSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -102,15 +130,6 @@ const Auth = () => {
         setAuthError(error.message);
         return;
       }
-
-      toast({
-        title: "Success",
-        description: "Successfully signed in",
-      });
-      
-      if (data.email === 'admin@example.com') {
-        navigate('/admin');
-      }
     } catch (error) {
       console.error('Login error:', error);
       setAuthError('An unexpected error occurred');
@@ -124,139 +143,16 @@ const Auth = () => {
     setAuthError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
+            phone: data.phone,
           },
-        },
-      });
-
-      if (error) {
-        setAuthError(error.message);
-        return;
-      }
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone: data.phone,
-        })
-        .eq('id', (await supabase.auth.getUser()).data.user?.id);
-
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-      }
-
-      toast({
-        title: "Success",
-        description: "Registration successful! Please check your email to verify your account."
-      });
-    } catch (error) {
-      console.error('Signup error:', error);
-      setAuthError('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAdminLogin = async () => {
-    setIsLoading(true);
-    setAuthError(null);
-
-    try {
-      // Use a valid domain for admin email - this is a test account
-      const adminEmail = 'admin@example-domain.com';
-      const adminPassword = 'admin123';
-      
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: adminEmail,
-        password: adminPassword,
-      });
-
-      if (signInError) {
-        console.log('Admin user not found, creating one...');
-        
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: adminEmail,
-          password: adminPassword,
-          options: {
-            data: {
-              first_name: 'Admin',
-              last_name: 'User',
-              is_admin: true,
-            },
-          },
-        });
-
-        if (signUpError) {
-          setAuthError(signUpError.message);
-          return;
-        }
-
-        const { error: signInAfterCreateError } = await supabase.auth.signInWithPassword({
-          email: adminEmail,
-          password: adminPassword,
-        });
-
-        if (signInAfterCreateError) {
-          setAuthError(signInAfterCreateError.message);
-          return;
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: "Admin login successful",
-      });
-      navigate('/admin');
-    } catch (error) {
-      console.error('Admin login error:', error);
-      setAuthError('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // New function to create a specific admin user
-  const createSpecificAdmin = async () => {
-    setIsLoading(true);
-    setAuthError(null);
-
-    try {
-      const adminEmail = 'nasser321m@gmail.ma';
-      const adminPassword = 'Admin123';
-      const firstName = 'Nasser';
-      const lastName = 'MH';
-      
-      // Check if user already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('first_name', firstName)
-        .eq('last_name', lastName)
-        .single();
-      
-      if (!checkError && existingUser) {
-        setAuthError('This admin user already exists');
-        return;
-      }
-      
-      // Create new admin user
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: adminEmail,
-        password: adminPassword,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            is_admin: true,
-          },
+          emailRedirectTo: `${window.location.origin}/auth?mode=login`,
         },
       });
 
@@ -265,31 +161,76 @@ const Auth = () => {
         return;
       }
 
-      // Update the profile to set is_admin to true
-      if (data.user) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('id', data.user.id);
-        
-        if (updateError) {
-          console.error('Error updating admin status:', updateError);
-          setAuthError('Error setting admin privileges');
-          return;
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: `Admin user ${firstName} ${lastName} created successfully!`,
-      });
+      setEmailSent(true);
+      toast.success("Registration successful! Please check your email to verify your account.");
     } catch (error) {
-      console.error('Admin creation error:', error);
+      console.error('Signup error:', error);
       setAuthError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // If email verification is in progress
+  if (verifyingEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Verifying Your Email</CardTitle>
+            <CardDescription className="text-center">
+              Please wait while we verify your email address...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center py-6">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If signup was successful and we're waiting for email verification
+  if (emailSent && mode === 'register') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <Mail className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl text-center">Check Your Email</CardTitle>
+            <CardDescription className="text-center">
+              We've sent you a verification link to complete your registration
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="mb-6">
+              Please check your email inbox and click the verification link to activate your account.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              If you don't see the email, check your spam folder or try again.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => setEmailSent(false)}
+            >
+              Back to Sign Up
+            </Button>
+            <div className="text-center text-sm">
+              Already verified?{' '}
+              <a href="/auth?mode=login" className="text-primary hover:underline">
+                Sign in
+              </a>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
@@ -307,6 +248,8 @@ const Auth = () => {
         <CardContent>
           {authError && (
             <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>{authError}</AlertDescription>
             </Alert>
           )}
@@ -527,34 +470,6 @@ const Auth = () => {
               </div>
             )}
           </div>
-          
-          {mode === 'login' && (
-            <div className="text-center space-y-3">
-              <div className="text-sm text-gray-500 mb-2">Admin? Sign in here</div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full"
-                onClick={handleAdminLogin}
-                disabled={isLoading}
-              >
-                Default Admin Login
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                className="w-full"
-                onClick={createSpecificAdmin}
-                disabled={isLoading}
-              >
-                Create Nasser MH Admin
-              </Button>
-              <div className="mt-2 text-xs text-gray-400">
-                <p>Default Admin: admin@example-domain.com / admin123</p>
-                <p>New Admin: nasser321m@gmail.ma / Admin123</p>
-              </div>
-            </div>
-          )}
         </CardFooter>
       </Card>
     </div>

@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Profile {
   id: string;
@@ -10,6 +11,7 @@ interface Profile {
   phone: string | null;
   avatar_url: string | null;
   is_admin: boolean;
+  email_confirmed: boolean;
 }
 
 interface AuthContextType {
@@ -18,6 +20,7 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +31,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  };
+
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -36,15 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          if (!error && profileData) {
-            setProfile(profileData);
-          }
+          await fetchProfile(currentSession.user.id);
         }
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -57,24 +78,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log('Auth state changed:', event);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setIsLoading(true);
 
         if (event === 'SIGNED_IN' && newSession?.user) {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newSession.user.id)
-            .single();
-
-          if (!error && profileData) {
-            setProfile(profileData);
-          }
+          await fetchProfile(newSession.user.id);
         }
 
         if (event === 'SIGNED_OUT') {
           setProfile(null);
+        }
+
+        if (event === 'USER_UPDATED') {
+          // Refresh the user's profile when they verify their email
+          if (newSession?.user) {
+            await fetchProfile(newSession.user.id);
+          }
         }
 
         setIsLoading(false);
@@ -89,8 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      toast.success("Successfully signed out");
     } catch (error) {
       console.error('Error signing out:', error);
+      toast.error("Failed to sign out");
     }
   };
 
@@ -100,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     isLoading,
     signOut,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

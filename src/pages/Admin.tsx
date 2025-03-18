@@ -6,17 +6,20 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CarManagement } from '@/components/admin/CarManagement';
 import { BookingManagement } from '@/components/admin/BookingManagement';
-import { CreateAdminForm } from '@/components/admin/CreateAdminForm';
+import { AdminManagement } from '@/components/admin/AdminManagement';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { Shield, UserCog } from 'lucide-react';
 
 const Admin = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
-  const { profile, session } = useAuth();
+  const { profile, session, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
+      if (authLoading) return;
+      
       setIsLoading(true);
       
       try {
@@ -43,9 +46,9 @@ const Admin = () => {
     };
 
     checkAdminStatus();
-  }, [navigate, profile, session]);
+  }, [navigate, profile, session, authLoading]);
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -59,7 +62,15 @@ const Admin = () => {
       
       <main className="flex-grow pt-28 pb-20">
         <div className="container max-w-7xl mx-auto px-6 md:px-10">
-          <h1 className="text-3xl md:text-4xl font-semibold mb-8">Admin Dashboard</h1>
+          <div className="flex items-center gap-3 mb-8">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl md:text-4xl font-semibold">Admin Dashboard</h1>
+          </div>
+          
+          <div className="bg-muted/30 p-4 rounded-lg mb-8 flex items-center gap-3">
+            <UserCog className="h-5 w-5 text-primary" />
+            <p>Logged in as: <span className="font-medium">{profile?.first_name} {profile?.last_name}</span> (Administrator)</p>
+          </div>
           
           <Tabs defaultValue="cars" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8">
@@ -77,9 +88,7 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="admins">
-              <div className="max-w-md mx-auto">
-                <CreateAdminForm />
-              </div>
+              <AdminManagement />
             </TabsContent>
           </Tabs>
         </div>

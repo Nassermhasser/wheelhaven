@@ -23,7 +23,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 
 const adminSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -34,16 +34,25 @@ const adminSchema = z.object({
 
 type AdminFormValues = z.infer<typeof adminSchema>;
 
-export const CreateAdminForm = () => {
+interface CreateAdminFormProps {
+  onAdminCreated?: () => void;
+}
+
+export const CreateAdminForm = ({ onAdminCreated }: CreateAdminFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { profile } = useAuth();
-  const navigate = useNavigate();
 
-  // Redirect non-admin users
-  if (profile && !profile.is_admin) {
-    toast.error('Only administrators can access this feature');
-    navigate('/');
-    return null;
+  // Validate current user is admin
+  if (!profile?.is_admin) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-muted-foreground">
+            You don't have permission to create admin users.
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const form = useForm<AdminFormValues>({
@@ -60,12 +69,6 @@ export const CreateAdminForm = () => {
     setIsLoading(true);
     
     try {
-      // Check if the current user is an admin
-      if (!profile?.is_admin) {
-        toast.error('You do not have permission to create admin users');
-        return;
-      }
-
       // First create the user with supabase auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
@@ -76,6 +79,7 @@ export const CreateAdminForm = () => {
             last_name: data.lastName,
             is_admin: true,
           },
+          emailRedirectTo: `${window.location.origin}/auth?mode=login&admin=true`
         },
       });
 
@@ -102,7 +106,14 @@ export const CreateAdminForm = () => {
       }
 
       toast.success(`Admin user ${data.firstName} ${data.lastName} created successfully!`);
+      toast.info("A confirmation email has been sent to the new admin");
+      
       form.reset();
+      
+      // Notify parent component that an admin was created
+      if (onAdminCreated) {
+        onAdminCreated();
+      }
     } catch (error) {
       console.error('Error creating admin:', error);
       toast.error('Failed to create admin user');
@@ -114,7 +125,10 @@ export const CreateAdminForm = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create New Admin</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5" />
+          Create New Admin
+        </CardTitle>
         <CardDescription>
           Create a new administrator account with full system access
         </CardDescription>
