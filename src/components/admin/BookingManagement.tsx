@@ -59,6 +59,8 @@ export const BookingManagement = () => {
   const { data: bookings, isLoading, error } = useQuery({
     queryKey: ['adminBookings'],
     queryFn: async () => {
+      console.log('Fetching admin bookings...');
+      
       // First get bookings with car details
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -68,7 +70,12 @@ export const BookingManagement = () => {
         `)
         .order('created_at', { ascending: false });
       
-      if (bookingsError) throw bookingsError;
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+        throw bookingsError;
+      }
+      
+      console.log('Bookings data fetched:', bookingsData);
       
       // Process the joined data
       const processedBookings = bookingsData.map((booking: any) => {
@@ -143,6 +150,15 @@ export const BookingManagement = () => {
       return dateString;
     }
   };
+
+  if (error) {
+    console.error('Error in bookings query:', error);
+    return (
+      <div className="text-center py-8">
+        <p className="text-lg text-red-500">Error loading bookings: {error.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
