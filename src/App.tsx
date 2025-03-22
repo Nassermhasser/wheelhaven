@@ -1,5 +1,7 @@
+
 import { Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { Helmet } from 'react-helmet';
 import Index from '@/pages/Index';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
@@ -18,6 +20,25 @@ import './App.css';
 function App() {
   return (
     <>
+      <Helmet>
+        <meta charSet="utf-8" />
+        <title>WheelHaven - Premium Car Rental Service</title>
+        <meta name="description" content="WheelHaven offers premium car rentals with a wide selection of vehicles. Find the perfect car for your needs, from luxury sedans to SUVs and economy options." />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="WheelHaven - Premium Car Rental Service" />
+        <meta property="og:description" content="Find and rent the perfect car for your journey with WheelHaven's premium car rental service." />
+        <meta property="og:image" content="/og-image.png" />
+        <meta property="og:url" content="https://wheelhaven.com" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="WheelHaven - Premium Car Rental Service" />
+        <meta name="twitter:description" content="Find and rent the perfect car for your journey with WheelHaven's premium car rental service." />
+        <meta name="twitter:image" content="/og-image.png" />
+        <link rel="canonical" href="https://wheelhaven.com" />
+      </Helmet>
+      
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/about" element={<About />} />

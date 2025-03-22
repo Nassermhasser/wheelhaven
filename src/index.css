@@ -103,6 +103,19 @@
   .slide-right-active {
     @apply opacity-100 transform translate-x-0;
   }
+  
+  /* Modern UI Utilities */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-800 to-brand-600;
+  }
+  
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-md;
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-105;
+  }
 }
 
 /* Glass morphism */
@@ -112,6 +125,16 @@
 
 .glass-dark {
   @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-md;
+}
+
+/* Card styles */
+.card-modern {
+  @apply bg-white rounded-xl shadow-soft border border-gray-100 hover:shadow-soft-lg transition-shadow duration-300;
+}
+
+/* Button styles */
+.btn-modern {
+  @apply rounded-full px-6 py-3 font-medium transition-all duration-300;
 }
 
 /* Transitions */
