@@ -1,99 +1,130 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const Faqs = () => {
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
       <main className="flex-grow pt-28 pb-20">
         <div className="container max-w-3xl mx-auto px-6 md:px-10">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-semibold mb-4">Frequently Asked Questions</h1>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Find answers to the most common questions about our car rental service.
-            </p>
-          </div>
+          <h1 className="text-3xl md:text-4xl font-semibold mb-8">Frequently Asked Questions</h1>
+          
+          <p className="text-gray-600 mb-8">
+            Find answers to the most common questions about our car rental service. If you can't find what you're looking for, please contact our customer support team.
+          </p>
           
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger className="text-left font-medium">What is the minimum age to rent a car?</AccordionTrigger>
-              <AccordionContent>
-                <p>The minimum age to rent a car is 21 years. However, drivers under 25 may be subject to a young driver surcharge and may be restricted from renting certain high-end or luxury vehicles.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                What documents do I need to rent a car?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>To rent a car, you'll need:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>A valid driver's license</li>
+                  <li>A major credit card in the driver's name</li>
+                  <li>Proof of insurance (in some locations)</li>
+                  <li>A valid ID or passport (for international rentals)</li>
+                </ul>
+                <p className="mt-2">Additional documentation may be required for luxury or specialty vehicles.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-2">
-              <AccordionTrigger className="text-left font-medium">Do I need insurance to rent a car?</AccordionTrigger>
-              <AccordionContent>
-                <p>Basic insurance is included in all our rental prices. However, we recommend purchasing additional coverage for complete peace of mind. You can add this during the booking process or at the rental counter when you pick up your car.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                What is your cancellation policy?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>Our standard cancellation policy allows free cancellation up to 48 hours before your scheduled pick-up time. Cancellations made within 48 hours may be subject to a cancellation fee equivalent to one day's rental. No-shows will be charged the full rental amount.</p>
+                <p className="mt-2">Prepaid reservations have different terms that are provided at the time of booking.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-3">
-              <AccordionTrigger className="text-left font-medium">How do I pay for my rental?</AccordionTrigger>
-              <AccordionContent>
-                <p>We accept all major credit cards for payment. The credit card used for the reservation must be in the name of the main driver and presented at the time of pickup. We may place a hold on your card for a security deposit, which will be released upon return of the vehicle in good condition.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                Can I modify my reservation?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>Yes, you can modify your reservation through your account on our website or by contacting our customer service. Changes to pick-up/drop-off times, locations, or vehicle type are subject to availability and may result in price adjustments.</p>
+                <p className="mt-2">We recommend making any changes as early as possible to ensure availability.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-4">
-              <AccordionTrigger className="text-left font-medium">Can I cancel my reservation?</AccordionTrigger>
-              <AccordionContent>
-                <p>Yes, you can cancel your reservation. For most bookings, cancellations made at least 48 hours before the pickup time are free of charge. Later cancellations may incur a fee. Please refer to the specific terms and conditions provided during your booking process.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                What is the minimum age to rent a car?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>The standard minimum age to rent a car is 21 years. However, drivers under 25 may:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Be subject to a young driver surcharge</li>
+                  <li>Have limitations on the types of vehicles they can rent</li>
+                </ul>
+                <p className="mt-2">Luxury, premium, and specialty vehicles often require the driver to be at least 25 years old.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-5">
-              <AccordionTrigger className="text-left font-medium">What documents do I need to rent a car?</AccordionTrigger>
-              <AccordionContent>
-                <p>You'll need a valid driver's license that you've held for at least one year, a credit card in your name for the security deposit, and a valid ID or passport. International customers may also need an International Driving Permit depending on the country of origin.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                Do you offer insurance options?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>Yes, we offer several insurance options:</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1">
+                  <li>Collision Damage Waiver (CDW)</li>
+                  <li>Loss Damage Waiver (LDW)</li>
+                  <li>Supplemental Liability Insurance</li>
+                  <li>Personal Accident Insurance</li>
+                  <li>Personal Effects Coverage</li>
+                </ul>
+                <p className="mt-2">You can add these to your booking during the reservation process. Your personal auto insurance or credit card may also provide coverage for rental cars.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-6">
-              <AccordionTrigger className="text-left font-medium">Is there a mileage limit?</AccordionTrigger>
-              <AccordionContent>
-                <p>Most of our rentals come with unlimited mileage within the country of rental. However, some special offers or long-term rentals may have mileage restrictions. Any mileage limitations will be clearly indicated during the booking process.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                What happens if I return the car late?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>We provide a 30-minute grace period after your scheduled return time. Returns after this grace period may be charged at the hourly rate, up to a maximum of one additional day's rental fee.</p>
+                <p className="mt-2">If you know you'll be late, please contact us as soon as possible to extend your rental and avoid additional fees.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-7">
-              <AccordionTrigger className="text-left font-medium">Can I take the rental car across borders?</AccordionTrigger>
-              <AccordionContent>
-                <p>Cross-border travel is allowed to certain countries with prior authorization. Additional fees and insurance may apply. Please contact our customer service at least 7 days before your trip to arrange the necessary permissions and documentation.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                Do I need to refill the gas tank before returning the car?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>Yes, our rentals come with a full tank of gas, and we expect the vehicle to be returned with a full tank. If the car is returned with less fuel than at pickup, you'll be charged for the missing fuel plus a refueling service fee.</p>
+                <p className="mt-2">We also offer a pre-paid fuel option that allows you to return the car with any amount of gas without additional fees.</p>
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-8">
-              <AccordionTrigger className="text-left font-medium">What happens if I return the car late?</AccordionTrigger>
-              <AccordionContent>
-                <p>We allow a 29-minute grace period for returns. After that, you may be charged for an additional day. If you know you're going to be late, please contact us as soon as possible to extend your rental (subject to availability) or to make alternative arrangements.</p>
-              </AccordionContent>
-            </AccordionItem>
-            
-            <AccordionItem value="item-9">
-              <AccordionTrigger className="text-left font-medium">What is your fuel policy?</AccordionTrigger>
-              <AccordionContent>
-                <p>Our rentals follow a "full-to-full" fuel policy. This means you'll receive the car with a full tank and are expected to return it with a full tank. If the car is not returned with a full tank, you will be charged for the missing fuel plus a refueling service fee.</p>
-              </AccordionContent>
-            </AccordionItem>
-            
-            <AccordionItem value="item-10">
-              <AccordionTrigger className="text-left font-medium">Do you offer one-way rentals?</AccordionTrigger>
-              <AccordionContent>
-                <p>Yes, one-way rentals are available between many of our locations. A one-way fee may apply, which varies depending on the pickup and drop-off locations. This fee will be displayed during the booking process if you select different locations.</p>
+              <AccordionTrigger className="text-lg font-medium">
+                Can I pick up the car in one location and return it to another?
+              </AccordionTrigger>
+              <AccordionContent className="text-gray-600">
+                <p>Yes, one-way rentals are available between many of our locations. There may be an additional one-way fee depending on the distance between locations and the type of vehicle.</p>
+                <p className="mt-2">One-way rentals should be arranged in advance during the booking process to ensure availability.</p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          
-          <div className="mt-12 text-center">
-            <p className="text-gray-600 mb-4">Didn't find what you were looking for?</p>
-            <a href="/contact" className="text-primary hover:underline font-medium">Contact our support team</a>
-          </div>
         </div>
       </main>
       

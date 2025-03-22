@@ -110,13 +110,21 @@ const Cars = () => {
   const removeFilter = (filterToRemove: string) => {
     setActiveFilters(activeFilters.filter(filter => filter !== filterToRemove));
     // In a real app, you would reapply the remaining filters
+    if (!cars) return;
+    setFilteredCars(cars);
   };
   
   // Clear all filters
   const clearAllFilters = () => {
     setActiveFilters([]);
-    setFilteredCars(cars || []);
+    if (!cars) return;
+    setFilteredCars(cars);
   };
+  
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   return (
     <div className="min-h-screen flex flex-col">
