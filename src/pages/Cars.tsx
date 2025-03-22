@@ -26,12 +26,17 @@ const Cars = () => {
   const { data: cars, isLoading, error } = useQuery({
     queryKey: ['allCars'],
     queryFn: async () => {
+      console.log('Fetching all cars');
       const { data, error } = await supabase
         .from('cars')
         .select('*')
         .order('brand');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching cars:', error);
+        throw error;
+      }
+      console.log('Cars data fetched:', data);
       return data as CarProps[];
     }
   });
@@ -47,6 +52,7 @@ const Cars = () => {
   // Update filtered cars when cars data or search term changes
   useEffect(() => {
     if (!cars) return;
+    console.log('Updating filtered cars with data:', cars);
     
     if (searchTerm.trim() === '') {
       setFilteredCars(cars);
@@ -196,7 +202,7 @@ const Cars = () => {
                     <div key={index} className="bg-gray-100 animate-pulse rounded-lg h-80"></div>
                   ))}
                 </div>
-              ) : filteredCars.length > 0 ? (
+              ) : filteredCars && filteredCars.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredCars.map(car => (
                     <CarCard key={car.id} car={car} />

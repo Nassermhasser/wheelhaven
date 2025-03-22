@@ -95,7 +95,6 @@ const Navbar = () => {
                     <div className="mt-6 pt-6 border-t">
                       {user ? (
                         <div className="space-y-4">
-                          <div className="font-medium">Welcome, {user.email}</div>
                           <Button onClick={signOut} variant="outline" className="w-full">
                             Sign out
                           </Button>
@@ -123,9 +122,6 @@ const Navbar = () => {
               
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">
-                    {user.email}
-                  </span>
                   <Button variant="outline" size="sm" onClick={signOut}>
                     Sign out
                   </Button>
