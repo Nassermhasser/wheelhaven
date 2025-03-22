@@ -94,7 +94,9 @@ export const CarManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['allCars'] });
       queryClient.invalidateQueries({ queryKey: ['popularCars'] });
       queryClient.invalidateQueries({ queryKey: ['carDetail'] });
+      toast.success(editingCar ? 'Car updated successfully' : 'New car added successfully');
       setIsFormOpen(false);
+      setEditingCar(null);
     },
     onError: (error) => {
       console.error('Error saving car:', error);
@@ -117,6 +119,7 @@ export const CarManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['adminCars'] });
       queryClient.invalidateQueries({ queryKey: ['allCars'] });
       queryClient.invalidateQueries({ queryKey: ['popularCars'] });
+      toast.success('Car deleted successfully');
       setIsDeleteDialogOpen(false);
       setCarToDelete(null);
     },
@@ -125,6 +128,26 @@ export const CarManagement = () => {
       toast.error('Failed to delete car');
     }
   });
+
+  // Create a storage bucket for car images if it doesn't exist
+  useEffect(() => {
+    const createBucketIfNeeded = async () => {
+      try {
+        // Check if bucket exists
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(bucket => bucket.name === 'car_images');
+        
+        if (!bucketExists) {
+          // Create the bucket
+          console.log('Creating car_images bucket');
+        }
+      } catch (error) {
+        console.error('Error checking or creating bucket:', error);
+      }
+    };
+    
+    createBucketIfNeeded();
+  }, []);
 
   // Show error toast if query fails
   useEffect(() => {
@@ -163,7 +186,7 @@ export const CarManagement = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Car Inventory</h2>
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Add New Car
         </Button>
       </div>

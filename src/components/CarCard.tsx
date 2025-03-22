@@ -96,11 +96,11 @@ const CarCard = ({ car }: { car: CarProps }) => {
         <div className="w-full flex justify-between items-center">
           <span className="text-sm text-gray-500">{car.transmission}</span>
           <Link to={`/cars/${car.id}`}>
-            <Button disabled={!isAvailable}>
+            <Button size="sm" disabled={!isAvailable}>
               {isAvailable ? (
                 <>
                   View Details
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                  <ChevronRight className="ml-1 h-3 w-3" />
                 </>
               ) : 'Not Available'}
             </Button>

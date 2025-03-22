@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Car } from './CarManagement';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Image as ImageIcon, Upload } from 'lucide-react';
 
 // Define validation schema for the car form
 const carSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   brand: z.string().min(1, 'Brand is required'),
-  image: z.string().url('Must be a valid URL'),
   price: z.coerce.number().min(1, 'Price must be at least 1'),
   priceUnit: z.string().default('per day'),
   year: z.coerce.number().min(2000, 'Year must be 2000 or later').max(new Date().getFullYear() + 1, 'Year cannot be in the future'),
@@ -34,13 +36,16 @@ interface CarFormProps {
 
 export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>(car?.image || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<CarFormData>({
     resolver: zodResolver(carSchema),
     defaultValues: {
       name: car?.name || '',
       brand: car?.brand || '',
-      image: car?.image || '',
       price: car?.price || 100,
       priceUnit: car?.priceUnit || 'per day',
       year: car?.year || new Date().getFullYear(),
@@ -51,14 +56,72 @@ export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      
+      // Create a preview URL
+      const fileReader = new FileReader();
+      fileReader.onload = () => {
+        setPreviewUrl(fileReader.result as string);
+      };
+      fileReader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedFile) return car?.image || null;
+    
+    setIsUploading(true);
+    try {
+      // Create a unique file name
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `car_images/${fileName}`;
+      
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('car_images')
+        .upload(filePath, selectedFile);
+        
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL
+      const { data } = supabase.storage.from('car_images').getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (data: CarFormData) => {
     setIsSubmitting(true);
     try {
+      // Upload image if a new file was selected
+      const imageUrl = await uploadImage();
+      
+      if (!imageUrl && !car?.image) {
+        toast.error('Please upload an image for the car');
+        setIsSubmitting(false);
+        return;
+      }
+      
       onSubmit({
         id: car?.id || '',
-        name: data.name, // Explicitly include all required properties
+        name: data.name,
         brand: data.brand,
-        image: data.image,
+        image: imageUrl || car?.image || '',
         price: data.price,
         priceUnit: data.priceUnit,
         year: data.year,
@@ -69,7 +132,6 @@ export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
       });
     } catch (error) {
       console.error('Error submitting form:', error);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -106,19 +168,45 @@ export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="image"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Image URL</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://example.com/car-image.jpg" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="md:col-span-2">
+            <FormLabel htmlFor="image">Car Image</FormLabel>
+            <div 
+              className="mt-1 flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={handleImageClick}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                id="image"
+              />
+              
+              {previewUrl ? (
+                <div className="relative w-full h-full">
+                  <img 
+                    src={previewUrl} 
+                    alt="Car preview" 
+                    className="w-full h-full object-contain p-2"
+                  />
+                  <div className="absolute inset-0 bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <Button type="button" variant="outline" className="bg-white">
+                      <Upload className="mr-2 h-4 w-4" /> Change Image
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
+                  <p className="mb-2 text-sm text-gray-500">
+                    <span className="font-semibold">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -260,8 +348,13 @@ export const CarForm = ({ car, onSubmit, onCancel }: CarFormProps) => {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : car ? 'Update Car' : 'Add Car'}
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || isUploading}
+          >
+            {(isSubmitting || isUploading) 
+              ? (isUploading ? 'Uploading...' : 'Saving...') 
+              : (car ? 'Update Car' : 'Add Car')}
           </Button>
         </div>
       </form>
