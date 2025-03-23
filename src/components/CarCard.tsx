@@ -94,9 +94,9 @@ const CarCard = ({ car }: { car: CarProps }) => {
       
       <CardFooter className="pt-2 pb-4 border-t">
         <div className="w-full flex justify-between items-center">
-          <span className="text-sm text-gray-500">{car.transmission}</span>
-          <Link to={`/cars/${car.id}`}>
-            <Button size="sm" disabled={!isAvailable}>
+          <span className="text-sm text-gray-500 flex-shrink-0">{car.transmission}</span>
+          <Link to={`/cars/${car.id}`} className="ml-2">
+            <Button size="sm" className="text-xs px-3 py-1 h-8" disabled={!isAvailable}>
               {isAvailable ? (
                 <>
                   View Details
