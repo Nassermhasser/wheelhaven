@@ -43,8 +43,13 @@ const signupSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -55,6 +60,8 @@ const Auth = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [isConnectionError, setIsConnectionError] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const navigate = useNavigate();
   const { user, profile, refreshProfile, isAdmin: userIsAdmin } = useAuth();
 
@@ -80,6 +87,13 @@ const Auth = () => {
     },
   });
 
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: '',
+    },
+  });
+
   useEffect(() => {
     // Check for email confirmation token in URL
     const hash = window.location.hash;
@@ -93,6 +107,15 @@ const Auth = () => {
           navigate('/');
         }
       }, 1000);
+    }
+
+    // Check for password reset token in URL
+    if (hash && hash.includes('type=recovery') && hash.includes('access_token')) {
+      // Handle password reset flow
+      const token = new URLSearchParams(hash.substring(1)).get('access_token');
+      if (token) {
+        navigate('/auth?mode=reset-password&token=' + token);
+      }
     }
   }, [navigate, user]);
 
@@ -225,6 +248,46 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPasswordSubmit = async (data: ForgotPasswordFormValues) => {
+    setIsLoading(true);
+    setAuthError(null);
+    setIsConnectionError(false);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+      });
+
+      if (error) {
+        if (error.message.includes('NetworkError') || error.message.includes('network') || error.status === 0) {
+          setIsConnectionError(true);
+          setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+        } else {
+          setAuthError(error.message);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      setResetEmailSent(true);
+      toast.success("Password reset email sent! Please check your inbox.");
+    } catch (error) {
+      console.error('Password reset error:', error);
+      
+      if (error instanceof Error && 
+          (error.message.includes('NetworkError') || 
+           error.message.includes('network') || 
+           error.name === 'TypeError')) {
+        setIsConnectionError(true);
+        setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+      } else {
+        setAuthError('An unexpected error occurred');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAdminLogin = () => {
     loginForm.setValue('email', 'admin@carrental.com');
     loginForm.setValue('password', 'admin123');
@@ -291,6 +354,133 @@ const Auth = () => {
               Already verified?{' '}
               <a href="/auth?mode=login" className="text-primary hover:underline">
                 Sign in
+              </a>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // If password reset email was sent
+  if (resetEmailSent && forgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <Mail className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl text-center">Check Your Email</CardTitle>
+            <CardDescription className="text-center">
+              We've sent you a password reset link
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="mb-6">
+              Please check your email inbox and click the link to reset your password.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              If you don't see the email, check your spam folder or try again.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                setResetEmailSent(false);
+                setForgotPassword(false);
+              }}
+            >
+              Back to Sign In
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // Forgot password form
+  if (forgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Reset Your Password</CardTitle>
+            <CardDescription className="text-center">
+              Enter your email address and we'll send you a link to reset your password
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isConnectionError && (
+              <Alert variant="destructive" className="mb-4">
+                <WifiOff className="h-4 w-4" />
+                <AlertTitle>Connection Error</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>{authError}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2 self-start"
+                    onClick={handleRetryConnection}
+                  >
+                    <Wifi className="h-4 w-4 mr-2" />
+                    Retry Connection
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {authError && !isConnectionError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
+
+            <Form {...forgotPasswordForm}>
+              <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPasswordSubmit)} className="space-y-4">
+                <FormField
+                  control={forgotPasswordForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="your.email@example.com" 
+                          type="email" 
+                          autoComplete="email"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isLoading || isConnectionError}
+                >
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-3">
+            <div className="text-center text-sm">
+              <a 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setForgotPassword(false);
+                }} 
+                className="text-primary hover:underline"
+              >
+                Back to Sign In
               </a>
             </div>
           </CardFooter>
@@ -388,23 +578,37 @@ const Auth = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={loginForm.control}
-                  name="rememberMe"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Remember me</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex items-center justify-between">
+                  <FormField
+                    control={loginForm.control}
+                    name="rememberMe"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Remember me</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <div>
+                    <a 
+                      href="#" 
+                      className="text-sm text-primary hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setForgotPassword(true);
+                      }}
+                    >
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
                 <Button 
                   type="submit" 
                   className="w-full"
