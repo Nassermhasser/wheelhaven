@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -43,80 +44,109 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        throw error;
+        if (error.code !== 'PGRST116') { // Not found error is expected for new users
+          throw error;
+        }
+        return null;
       }
 
       if (profileData) {
         console.log('Profile data loaded:', profileData);
         setProfile(profileData);
+        console.log('Setting isAdmin to:', profileData.is_admin === true);
         setIsAdmin(profileData.is_admin === true);
+        return profileData;
       }
+      
+      return null;
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchProfile:', error);
+      // Don't throw the error to prevent breaking the auth flow
+      return null;
     }
   };
 
   const refreshProfile = async () => {
+    console.log("Refreshing profile, current user:", user?.id);
     if (user?.id) {
-      await fetchProfile(user.id);
+      const profileData = await fetchProfile(user.id);
+      return profileData;
     }
+    return null;
   };
 
   useEffect(() => {
-    const fetchSession = async () => {
+    console.log("Setting up AuthContext");
+    const initializeAuth = async () => {
       try {
+        setIsLoading(true);
+        
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log('Auth state changed:', event, newSession?.user?.id);
+            console.log('Event details:', { event, user: newSession?.user?.email });
+            
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            
+            if (event === 'SIGNED_IN' && newSession?.user) {
+              const profileData = await fetchProfile(newSession.user.id);
+              console.log('Profile after sign in:', profileData);
+            }
+            
+            if (event === 'SIGNED_OUT') {
+              setProfile(null);
+              setIsAdmin(false);
+              console.log('User signed out, cleared profile and admin status');
+            }
+            
+            if (event === 'USER_UPDATED' && newSession?.user) {
+              const profileData = await fetchProfile(newSession.user.id);
+              console.log('Profile after user update:', profileData);
+            }
+          }
+        );
+        
+        // THEN check for existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log('Initial session check:', currentSession);
+        console.log('Initial session check:', currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-
+        
         if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
+          const profileData = await fetchProfile(currentSession.user.id);
+          console.log('Initial profile:', profileData);
         }
+        
+        return () => {
+          console.log("Cleaning up auth subscription");
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('Error fetching session:', error);
+        console.error('Error in auth initialization:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('Auth state changed:', event, newSession?.user?.id);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        setIsLoading(true);
-
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          await fetchProfile(newSession.user.id);
-        }
-
-        if (event === 'SIGNED_OUT') {
-          setProfile(null);
-          setIsAdmin(false);
-        }
-
-        if (event === 'USER_UPDATED') {
-          // Refresh the user's profile when they verify their email
-          if (newSession?.user) {
-            await fetchProfile(newSession.user.id);
-          }
-        }
-
-        setIsLoading(false);
-      }
-    );
-
+    
+    const cleanup = initializeAuth();
+    
     return () => {
-      authListener.subscription.unsubscribe();
+      cleanup.then(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
     };
   }, []);
 
   const signOut = async () => {
     try {
+      console.log("Signing out user");
       await supabase.auth.signOut();
+      setProfile(null);
+      setIsAdmin(false);
       toast.success("Successfully signed out");
     } catch (error) {
       console.error('Error signing out:', error);

@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Mail, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Mail, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
@@ -54,6 +54,7 @@ const Auth = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [isConnectionError, setIsConnectionError] = useState(false);
   const navigate = useNavigate();
   const { user, profile, refreshProfile, isAdmin: userIsAdmin } = useAuth();
 
@@ -127,17 +128,26 @@ const Auth = () => {
   const handleLoginSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setAuthError(null);
+    setIsConnectionError(false);
 
     try {
       console.log("Attempting login with:", data.email);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data: authData } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
         console.error("Login error:", error.message);
-        setAuthError(error.message);
+        
+        // Check if it's a network error
+        if (error.message.includes('NetworkError') || error.message.includes('network') || error.status === 0) {
+          setIsConnectionError(true);
+          setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+        } else {
+          setAuthError(error.message);
+        }
+        
         setIsLoading(false);
         return;
       }
@@ -150,7 +160,18 @@ const Auth = () => {
       toast.success("Login successful!");
     } catch (error) {
       console.error('Login error:', error);
-      setAuthError('An unexpected error occurred');
+      
+      // Check if it's a network error
+      if (error instanceof Error && 
+          (error.message.includes('NetworkError') || 
+           error.message.includes('network') || 
+           error.name === 'TypeError')) {
+        setIsConnectionError(true);
+        setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+      } else {
+        setAuthError('An unexpected error occurred');
+      }
+      
       setIsLoading(false);
     }
   };
@@ -158,6 +179,7 @@ const Auth = () => {
   const handleSignupSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     setAuthError(null);
+    setIsConnectionError(false);
 
     try {
       const { error: signUpError } = await supabase.auth.signUp({
@@ -174,7 +196,12 @@ const Auth = () => {
       });
 
       if (signUpError) {
-        setAuthError(signUpError.message);
+        if (signUpError.message.includes('NetworkError') || signUpError.message.includes('network') || signUpError.status === 0) {
+          setIsConnectionError(true);
+          setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+        } else {
+          setAuthError(signUpError.message);
+        }
         setIsLoading(false);
         return;
       }
@@ -183,7 +210,16 @@ const Auth = () => {
       toast.success("Registration successful! Please check your email to verify your account.");
     } catch (error) {
       console.error('Signup error:', error);
-      setAuthError('An unexpected error occurred');
+      
+      if (error instanceof Error && 
+          (error.message.includes('NetworkError') || 
+           error.message.includes('network') || 
+           error.name === 'TypeError')) {
+        setIsConnectionError(true);
+        setAuthError("Unable to connect to the authentication server. Please check your internet connection and try again.");
+      } else {
+        setAuthError('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -193,6 +229,13 @@ const Auth = () => {
     loginForm.setValue('email', 'admin@carrental.com');
     loginForm.setValue('password', 'admin123');
     toast.info("Default admin credentials filled in. Click Sign in to continue.");
+  };
+  
+  const handleRetryConnection = () => {
+    setIsConnectionError(false);
+    setAuthError(null);
+    // No need to do anything else, just clear the errors
+    toast.info("Retrying connection...");
   };
 
   // If email verification is in progress
@@ -271,7 +314,26 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {authError && (
+          {isConnectionError && (
+            <Alert variant="destructive" className="mb-4">
+              <WifiOff className="h-4 w-4" />
+              <AlertTitle>Connection Error</AlertTitle>
+              <AlertDescription className="flex flex-col gap-2">
+                <p>{authError}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 self-start"
+                  onClick={handleRetryConnection}
+                >
+                  <Wifi className="h-4 w-4 mr-2" />
+                  Retry Connection
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {authError && !isConnectionError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
@@ -346,7 +408,7 @@ const Auth = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || isConnectionError}
                 >
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
@@ -492,7 +554,7 @@ const Auth = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || isConnectionError}
                 >
                   {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Button>
