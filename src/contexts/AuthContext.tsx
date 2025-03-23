@@ -42,10 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
+        console.error('Error fetching profile:', error);
         throw error;
       }
 
       if (profileData) {
+        console.log('Profile data loaded:', profileData);
         setProfile(profileData);
         setIsAdmin(profileData.is_admin === true);
       }
@@ -64,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const fetchSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Initial session check:', currentSession);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
@@ -81,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, newSession?.user?.id);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setIsLoading(true);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -97,19 +98,26 @@ const Auth = () => {
   useEffect(() => {
     // If user is logged in and verified, redirect to appropriate page
     if (user && profile) {
-      console.log("Auth page - User is logged in, profile:", profile);
-      console.log("isAdmin param:", isAdmin, "userIsAdmin:", userIsAdmin);
+      console.log("Auth page - User logged in, profile:", profile);
+      console.log("isAdmin param:", isAdmin, "userIsAdmin:", userIsAdmin, "profile.is_admin:", profile.is_admin);
       
       // If admin login was requested and user is admin, redirect to admin page
-      if (isAdmin && profile.is_admin) {
-        console.log("Redirecting to admin page");
+      if (isAdmin && profile.is_admin === true) {
+        console.log("Redirecting to admin page from Auth");
         navigate('/admin');
         return;
       }
       
       // Otherwise redirect to home
       if (!isAdmin) {
-        console.log("Redirecting to home page");
+        console.log("Redirecting to home page from Auth");
+        navigate('/');
+        return;
+      }
+      
+      // If admin login was requested but user is not admin, show error
+      if (isAdmin && !profile.is_admin) {
+        toast.error("You do not have admin privileges");
         navigate('/');
         return;
       }
@@ -121,12 +129,14 @@ const Auth = () => {
     setAuthError(null);
 
     try {
+      console.log("Attempting login with:", data.email);
       const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
+        console.error("Login error:", error.message);
         setAuthError(error.message);
         setIsLoading(false);
         return;
@@ -134,6 +144,7 @@ const Auth = () => {
 
       // Refresh profile to get updated admin status
       await refreshProfile();
+      console.log("Login successful, refreshed profile");
       
       // Toast will show, but navigation happens in the useEffect
       toast.success("Login successful!");
@@ -265,6 +276,14 @@ const Auth = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{authError}</AlertDescription>
+            </Alert>
+          )}
+
+          {isAdmin && !userIsAdmin && user && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Admin Access Required</AlertTitle>
+              <AlertDescription>This account does not have administrator privileges.</AlertDescription>
             </Alert>
           )}
 

@@ -23,6 +23,8 @@ const Admin = () => {
       setIsLoading(true);
       
       try {
+        console.log("Admin page - Checking admin status, session:", !!session, "profile:", profile, "isAdmin:", isAdmin);
+        
         if (!session) {
           console.log("No session found, redirecting to admin login");
           toast.error('Please sign in to access admin features');
@@ -30,16 +32,14 @@ const Admin = () => {
           return;
         }
 
-        console.log("Checking admin status, profile:", profile, "isAdmin:", isAdmin);
-
         // Strict check that profile exists and is admin
         if (profile && profile.is_admin === true) {
           // User is admin, allow access
-          console.log("User is admin, allowing access");
+          console.log("User is admin, allowing access to admin page");
           setIsLoading(false);
         } else {
           // User is not admin, redirect to home
-          console.log("User is not admin, redirecting to home");
+          console.log("User is not admin, redirecting to home from admin page");
           toast.error('You do not have admin privileges');
           navigate('/');
         }

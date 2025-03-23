@@ -37,8 +37,9 @@ const Navbar = () => {
       { name: 'Contact', path: '/contact' },
     ];
     
-    // Only show Admin link if user is an admin
-    if (isAdmin) {
+    // Show Admin link if user is an admin
+    console.log("Navbar - Checking admin status for link:", profile?.is_admin);
+    if (profile?.is_admin === true) {
       links.push({ name: 'Admin', path: '/admin' });
     }
     
