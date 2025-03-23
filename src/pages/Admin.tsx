@@ -14,7 +14,7 @@ import { Shield, UserCog } from 'lucide-react';
 const Admin = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
-  const { profile, session, isLoading: authLoading } = useAuth();
+  const { profile, session, isLoading: authLoading, isAdmin } = useAuth();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -24,17 +24,22 @@ const Admin = () => {
       
       try {
         if (!session) {
+          console.log("No session found, redirecting to admin login");
           toast.error('Please sign in to access admin features');
           navigate('/auth?mode=login&admin=true');
           return;
         }
 
+        console.log("Checking admin status, profile:", profile, "isAdmin:", isAdmin);
+
         // Strict check that profile exists and is admin
         if (profile && profile.is_admin === true) {
           // User is admin, allow access
+          console.log("User is admin, allowing access");
           setIsLoading(false);
         } else {
           // User is not admin, redirect to home
+          console.log("User is not admin, redirecting to home");
           toast.error('You do not have admin privileges');
           navigate('/');
         }
@@ -46,7 +51,7 @@ const Admin = () => {
     };
 
     checkAdminStatus();
-  }, [navigate, profile, session, authLoading]);
+  }, [navigate, profile, session, authLoading, isAdmin]);
 
   if (isLoading || authLoading) {
     return (

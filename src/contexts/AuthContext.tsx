@@ -21,6 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileData) {
         setProfile(profileData);
+        setIsAdmin(profileData.is_admin === true);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -89,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (event === 'SIGNED_OUT') {
           setProfile(null);
+          setIsAdmin(false);
         }
 
         if (event === 'USER_UPDATED') {
@@ -124,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     signOut,
     refreshProfile,
+    isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

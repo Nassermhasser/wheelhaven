@@ -11,7 +11,7 @@ const Navbar = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -38,7 +38,7 @@ const Navbar = () => {
     ];
     
     // Only show Admin link if user is an admin
-    if (profile?.is_admin) {
+    if (isAdmin) {
       links.push({ name: 'Admin', path: '/admin' });
     }
     

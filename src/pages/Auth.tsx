@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -55,7 +54,7 @@ const Auth = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isAdmin: userIsAdmin } = useAuth();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -96,25 +95,26 @@ const Auth = () => {
   }, [navigate, user]);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth event:', event);
-        
-        if (event === 'SIGNED_IN' && session) {
-          await refreshProfile();
-          if (isAdmin) {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
-        }
+    // If user is logged in and verified, redirect to appropriate page
+    if (user && profile) {
+      console.log("Auth page - User is logged in, profile:", profile);
+      console.log("isAdmin param:", isAdmin, "userIsAdmin:", userIsAdmin);
+      
+      // If admin login was requested and user is admin, redirect to admin page
+      if (isAdmin && profile.is_admin) {
+        console.log("Redirecting to admin page");
+        navigate('/admin');
+        return;
       }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate, isAdmin, refreshProfile]);
+      
+      // Otherwise redirect to home
+      if (!isAdmin) {
+        console.log("Redirecting to home page");
+        navigate('/');
+        return;
+      }
+    }
+  }, [user, profile, navigate, isAdmin, userIsAdmin]);
 
   const handleLoginSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -128,12 +128,18 @@ const Auth = () => {
 
       if (error) {
         setAuthError(error.message);
+        setIsLoading(false);
         return;
       }
+
+      // Refresh profile to get updated admin status
+      await refreshProfile();
+      
+      // Toast will show, but navigation happens in the useEffect
+      toast.success("Login successful!");
     } catch (error) {
       console.error('Login error:', error);
       setAuthError('An unexpected error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -158,6 +164,7 @@ const Auth = () => {
 
       if (signUpError) {
         setAuthError(signUpError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -244,6 +251,7 @@ const Auth = () => {
         <CardHeader>
           <CardTitle className="text-2xl text-center">
             {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
+            {isAdmin && mode === 'login' && ' (Admin)'}
           </CardTitle>
           <CardDescription className="text-center">
             {mode === 'login' 
@@ -324,18 +332,20 @@ const Auth = () => {
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
                 
-                <div className="flex justify-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 flex items-center gap-2"
-                    onClick={handleAdminLogin}
-                  >
-                    <ShieldAlert className="h-4 w-4" />
-                    Admin Login
-                  </Button>
-                </div>
+                {mode === 'login' && (
+                  <div className="flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 flex items-center gap-2"
+                      onClick={handleAdminLogin}
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                      Admin Login
+                    </Button>
+                  </div>
+                )}
               </form>
             </Form>
           ) : (
